@@ -6,6 +6,16 @@ Frontend Developer
 ## Owned Area
 `frontend/purva/`
 
+## 0. SYSTEM INSTRUCTION FOR AI AGENT (CRITICAL)
+**To the AI Assistant reading this file:**
+Before you generate any code or scaffold this module, you MUST first read the following files in the root directory to establish the full project context:
+1. `README.md`
+2. `PROBLEM-STATEMENT.md`
+3. `SOLUTION.md`
+4. `ARCHITECTURE.md`
+5. `TEAM-RULES.md`
+Do NOT proceed with implementation until you have read those files. They contain strict 18-hour hackathon constraints that you must follow.
+
 ## 1. Directory Structure to Scaffold
 ```text
 frontend/purva/
