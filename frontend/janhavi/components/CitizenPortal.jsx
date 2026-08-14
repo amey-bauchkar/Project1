@@ -89,7 +89,6 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
       setSubmittedData(result);
     } catch (err) {
       console.error("Submission Error:", err);
-      // If backend is not currently running in local dev, provide helpful message with mock preview
       if (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError")) {
         setErrorMessage(
           "Backend server not reachable at /api/issues. Ensure Amey's backend is running on port 5000."
@@ -267,3 +266,4 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
     </main>
   );
 }
+
