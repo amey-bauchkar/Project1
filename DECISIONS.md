@@ -22,7 +22,7 @@ Why Alternative Was Not Selected: Next.js full-stack can cause merge conflicts i
 Impact: Strict API boundary between the frontend team and backend leader. Groq API will handle the AI Triage.
 Affected Modules: Entire repository.
 
-## Decision 003
+## Decision 101 (Amey)
 
 Date: 2026-08-14
 Decision: Multer In-Memory Buffering + Cloudinary Stream Upload & Graceful AI Fallback in Backend.
@@ -31,4 +31,5 @@ Alternatives Considered: Multer diskStorage with local uploads, direct client-si
 Why Alternative Was Not Selected: Client-side direct uploads expose Cloudinary unsigned upload presets or secret keys and split business logic across modules. Local disk storage requires file cleanup jobs and fails when multi-instance backend is deployed.
 Impact: Clean single-endpoint issue creation (`POST /api/issues`) that handles image upload, AI categorization, and database persistence in one transaction-like flow.
 Affected Modules: `backend/amey/`
+
 

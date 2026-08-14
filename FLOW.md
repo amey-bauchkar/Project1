@@ -1,32 +1,33 @@
 # Application Flow
 
 ## Current Status
-Backend (Amey) implemented and documented. Frontend modules (Purva, Janhavi, Tanmay) in progress.
+Backend (Amey - 100 series) implemented and documented. Frontend modules (Tanmay: 200, Janhavi: 300, Purva: 400) in progress.
 
-## Backend Entry Point
+---
+
+# 100 Series: Backend & Data Execution Flow (Amey)
+
+### 101. Backend Entry & Express Server Setup
 - File: `backend/amey/src/server.js`
 - Starts Express server on port `PORT` (default 5000), connects to MongoDB Atlas via Mongoose (`src/config/db.js`), enables CORS for all origins, and mounts routes under `/api/auth` and `/api/issues`.
 
-## Main User Flow
+### 102. Groq AI Vision Triage Flow
+1. Citizen submits form -> sends multipart/form-data `POST /api/issues`.
+2. Backend streams image buffer to Cloudinary (`src/config/cloudinary.js`) to acquire secure URL.
+3. Passes secure image URL & description to Groq Llama 3.2 Vision (`src/services/groqService.js`).
+4. Groq Vision analyzes and outputs `{ category, severity }` JSON (with resilient heuristic fallback for offline/failover).
 
-### 1. Citizen Flow (Janhavi -> Amey)
-1. Citizen opens Mobile Web Portal at `/`.
-2. Citizen takes a photo of civic issue and clicks "Get My Location".
-3. Citizen submits form -> sends multipart/form-data `POST /api/issues`.
-4. Backend handles image streaming to Cloudinary -> passes secure URL & description to Groq Vision AI triage -> receives structured `{ category, severity }`.
-5. Backend stores document in MongoDB with GeoJSON `Point` coordinates `[longitude, latitude]`.
-6. Returns `201 Created` with issue data to frontend.
+### 103. Issue Schema & GeoJSON Storage
+1. Backend creates MongoDB record with GeoJSON `Point` coordinates `[longitude, latitude]`.
+2. `2dsphere` index allows spatial proximity queries for map rendering.
+3. Returns `201 Created` response with structured issue data.
 
-### 2. Admin & Dashboard Flow (Tanmay + Purva -> Amey)
-1. Municipal official visits `/login`.
-2. Submits credentials -> `POST /api/auth/login`.
-3. Backend validates password via `bcrypt`, generates signed JWT token with 7-day expiry -> returns `{ token, role: 'admin' }`.
-4. Admin is routed to `/admin` (`AdminDashboard`).
-5. Dashboard calls `GET /api/issues` to populate Kanban columns ("Pending", "In Progress", "Resolved") and Leaflet Map markers.
-6. When admin drags a card or updates status in `IssueModal`, sends `PATCH /api/issues/:id/status` with `Authorization: Bearer <jwt_token>`.
-7. Backend updates status and returns updated issue.
+### 104. Authentication & Status Management Flow
+1. `POST /api/auth/login`: Validates user credentials with `bcrypt` -> returns signed JWT.
+2. `GET /api/issues`: Fetches issues with optional filtering (`?status=Pending&category=Water`).
+3. `PATCH /api/issues/:id/status`: Validates Bearer JWT (`authMiddleware.js`), updates status (`Pending` -> `In Progress` -> `Resolved`), and returns updated issue.
 
-## API Flow Summary
+### 105. Backend API Endpoints Summary
 
 | Method | Endpoint | Auth | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -37,4 +38,5 @@ Backend (Amey) implemented and documented. Frontend modules (Purva, Janhavi, Tan
 | `GET` | `/api/issues` | None | Fetch all issues (supports `?status=&category=&severity=`) |
 | `GET` | `/api/issues/:id` | None | Fetch single issue details |
 | `PATCH` | `/api/issues/:id/status` | Bearer JWT | Update issue resolution status |
+
 
