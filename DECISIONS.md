@@ -22,6 +22,16 @@ Why Alternative Was Not Selected: Next.js full-stack can cause merge conflicts i
 Impact: Strict API boundary between the frontend team and backend leader. Groq API will handle the AI Triage.
 Affected Modules: Entire repository.
 
+## Decision 101 (Amey)
+
+Date: 2026-08-14
+Decision: Multer In-Memory Buffering + Cloudinary Stream Upload & Graceful AI Fallback in Backend.
+Reason: Using Multer memoryStorage prevents saving temporary image files to local server disk (critical for containerized/serverless deployments and ephemeral hackathon environments). The image buffer is directly streamed to Cloudinary. For Groq AI Triage, a resilient JSON sanitizer and intelligent rule-based heuristic fallback was implemented to ensure the reporting pipeline never breaks if external API credentials are not set or rate limits occur.
+Alternatives Considered: Multer diskStorage with local uploads, direct client-side Cloudinary upload from React.
+Why Alternative Was Not Selected: Client-side direct uploads expose Cloudinary unsigned upload presets or secret keys and split business logic across modules. Local disk storage requires file cleanup jobs and fails when multi-instance backend is deployed.
+Impact: Clean single-endpoint issue creation (`POST /api/issues`) that handles image upload, AI categorization, and database persistence in one transaction-like flow.
+Affected Modules: `backend/amey/`
+
 ## Decision 201 (Tanmay)
 
 Date: 2026-08-14
@@ -31,3 +41,4 @@ Alternatives Considered: Redux Toolkit, Zustand, URL param state.
 Why Alternative Was Not Selected: Redux is overkill for an 18-hour hackathon authentication scope. Context API + localStorage gives zero extra dependency weight and fast onboarding.
 Impact: `AuthContext` provides global `user`, `login(token)`, and `logout()` methods across all components.
 Affected Modules: `frontend/tanmay/`, `frontend/src/`
+
