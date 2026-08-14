@@ -42,3 +42,13 @@ Why Alternative Was Not Selected: Redux is overkill for an 18-hour hackathon aut
 Impact: `AuthContext` provides global `user`, `login(token)`, and `logout()` methods across all components.
 Affected Modules: `frontend/tanmay/`, `frontend/src/`
 
+## Decision 301 (Janhavi)
+
+Date: 2026-08-14
+Decision: Implemented HTML5 Media Capture with URL Object preview and Geolocation API with graceful accuracy fallbacks in Janhavi's module (`frontend/janhavi/`).
+Reason: Ensures zero-dependency mobile camera triggering across iOS Safari and Android Chrome without requiring heavy third-party camera libraries or native permissions. Handles network/GPS errors cleanly with user-friendly retry states.
+Alternatives Considered: React-Webcam library, Manual coordinate text entry.
+Why Alternative Was Not Selected: `react-webcam` requires complex WebRTC permissions, video streams, and canvas blitting which drain mobile battery and introduce compatibility hurdles during an 18-hour hackathon. Native file input with `capture="environment"` directly launches the OS camera interface.
+Impact: Lightweight, high-performance citizen mobile reporting with automatic multipart `FormData` transmission.
+Affected Modules: `frontend/janhavi/`
+
