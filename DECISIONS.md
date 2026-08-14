@@ -21,3 +21,13 @@ Alternatives Considered: Next.js (Full-stack), PostgreSQL, Google Gemini API.
 Why Alternative Was Not Selected: Next.js full-stack can cause merge conflicts if backend (Amey) and frontend (Purva, Janhavi, Tanmay) are constantly touching the same API route files. PostgreSQL schemas take longer to migrate during rushed hackathons. Gemini was replaced by Groq because Groq offers better request limits for testing and faster responses.
 Impact: Strict API boundary between the frontend team and backend leader. Groq API will handle the AI Triage.
 Affected Modules: Entire repository.
+
+## Decision 301 (Janhavi)
+
+Date: 2026-08-14
+Decision: Implemented HTML5 Media Capture with URL Object preview and Geolocation API with graceful accuracy fallbacks in Janhavi's module (`frontend/janhavi/`).
+Reason: Ensures zero-dependency mobile camera triggering across iOS Safari and Android Chrome without requiring heavy third-party camera libraries or native permissions. Handles network/GPS errors cleanly with user-friendly retry states.
+Alternatives Considered: React-Webcam library, Manual coordinate text entry.
+Why Alternative Was Not Selected: `react-webcam` requires complex WebRTC permissions, video streams, and canvas blitting which drain mobile battery and introduce compatibility hurdles during an 18-hour hackathon. Native file input with `capture="environment"` directly launches the OS camera interface.
+Impact: Lightweight, high-performance citizen mobile reporting with automatic multipart `FormData` transmission.
+Affected Modules: `frontend/janhavi/`
