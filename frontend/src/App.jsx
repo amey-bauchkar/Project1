@@ -6,6 +6,7 @@ import ProtectedRoute from '../tanmay/components/ProtectedRoute';
 import AdminLogin from '../tanmay/components/AdminLogin';
 import CitizenPortal from '../janhavi/components/CitizenPortal';
 import AdminDashboard from '../purva/components/AdminDashboard';
+import UnifiedPortal from './UnifiedPortal';
 
 export const App = () => {
   return (
@@ -14,13 +15,12 @@ export const App = () => {
         <Routes>
           {/* Main App Layout Shell */}
           <Route path="/" element={<AppShell />}>
-            {/* Citizen Portal (Janhavi's Module) */}
-            <Route index element={<CitizenPortal />} />
+            {/* Complete Unified All-in-One Dashboard (Citizen + Admin Map + Kanban) */}
+            <Route index element={<UnifiedPortal />} />
 
-            {/* Admin Login (Tanmay's Module) */}
+            {/* Individual Sub-Routes for Standalone Views */}
+            <Route path="report" element={<CitizenPortal apiBaseUrl="http://localhost:5000" />} />
             <Route path="login" element={<AdminLogin />} />
-
-            {/* Protected Admin Dashboard (Purva's Module) */}
             <Route
               path="admin"
               element={
@@ -40,3 +40,4 @@ export const App = () => {
 };
 
 export default App;
+
