@@ -21,3 +21,13 @@ Alternatives Considered: Next.js (Full-stack), PostgreSQL, Google Gemini API.
 Why Alternative Was Not Selected: Next.js full-stack can cause merge conflicts if backend (Amey) and frontend (Purva, Janhavi, Tanmay) are constantly touching the same API route files. PostgreSQL schemas take longer to migrate during rushed hackathons. Gemini was replaced by Groq because Groq offers better request limits for testing and faster responses.
 Impact: Strict API boundary between the frontend team and backend leader. Groq API will handle the AI Triage.
 Affected Modules: Entire repository.
+
+## Decision 201 (Tanmay)
+
+Date: 2026-08-14
+Decision: Implemented React Context API + LocalStorage persistence for Client Auth state with ProtectedRoute layout wrappers.
+Reason: Eliminates external state management bloat while ensuring seamless session restoration on page reload. Route protection directly integrates with `react-router-dom` to safeguard `/admin` views while allowing independent module development for Janhavi and Purva.
+Alternatives Considered: Redux Toolkit, Zustand, URL param state.
+Why Alternative Was Not Selected: Redux is overkill for an 18-hour hackathon authentication scope. Context API + localStorage gives zero extra dependency weight and fast onboarding.
+Impact: `AuthContext` provides global `user`, `login(token)`, and `logout()` methods across all components.
+Affected Modules: `frontend/tanmay/`, `frontend/src/`
