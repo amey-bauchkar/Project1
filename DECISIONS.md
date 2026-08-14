@@ -32,4 +32,13 @@ Why Alternative Was Not Selected: Client-side direct uploads expose Cloudinary u
 Impact: Clean single-endpoint issue creation (`POST /api/issues`) that handles image upload, AI categorization, and database persistence in one transaction-like flow.
 Affected Modules: `backend/amey/`
 
+## Decision 201 (Tanmay)
+
+Date: 2026-08-14
+Decision: Implemented React Context API + LocalStorage persistence for Client Auth state with ProtectedRoute layout wrappers.
+Reason: Eliminates external state management bloat while ensuring seamless session restoration on page reload. Route protection directly integrates with `react-router-dom` to safeguard `/admin` views while allowing independent module development for Janhavi and Purva.
+Alternatives Considered: Redux Toolkit, Zustand, URL param state.
+Why Alternative Was Not Selected: Redux is overkill for an 18-hour hackathon authentication scope. Context API + localStorage gives zero extra dependency weight and fast onboarding.
+Impact: `AuthContext` provides global `user`, `login(token)`, and `logout()` methods across all components.
+Affected Modules: `frontend/tanmay/`, `frontend/src/`
 

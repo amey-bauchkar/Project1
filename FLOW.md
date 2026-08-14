@@ -1,7 +1,9 @@
 # Application Flow
 
 ## Current Status
-Backend (Amey - 100 series) implemented and documented. Frontend modules (Tanmay: 200, Janhavi: 300, Purva: 400) in progress.
+- Backend (Amey - 100 series) implemented and live.
+- Frontend App Shell & Auth (Tanmay - 200 series) implemented.
+- Citizen Mobile Reporting (Janhavi - 300 series) and Admin Dashboard (Purva - 400 series) in progress.
 
 ---
 
@@ -39,4 +41,26 @@ Backend (Amey - 100 series) implemented and documented. Frontend modules (Tanmay
 | `GET` | `/api/issues/:id` | None | Fetch single issue details |
 | `PATCH` | `/api/issues/:id/status` | Bearer JWT | Update issue resolution status |
 
+---
+
+# 200 Series: Frontend App Shell & Auth Flow (Tanmay)
+
+### 201. Frontend Entry & Shell Initialization
+- `frontend/src/main.jsx` mounts `App.jsx` with `React.StrictMode` and Tailwind CSS.
+- `App.jsx` sets up `AuthProvider` and `BrowserRouter` with `AppShell` wrapping all child views.
+- `AppShell` renders responsive top `Navbar` with Jharkhand civic branding.
+
+### 202. Admin Authentication Flow (Tanmay)
+1. User clicks **"Admin Login"** in `Navbar` or navigates to `/login`.
+2. User enters government admin credentials (`admin@jharkhand.gov` / `password123`).
+3. `AdminLogin` sends `POST /api/auth/login` to Express Backend.
+4. On response (200), `AuthContext.login(token, user)` persists JWT in `localStorage`.
+5. User is redirected to `/admin` (`AdminDashboard` in Purva's module).
+6. `Navbar` dynamically updates to show authenticated badge and **"Logout"** button.
+
+### 203. Protected Route Security Flow (Tanmay)
+1. Unauthenticated visitor navigates directly to `/admin`.
+2. `ProtectedRoute` intercepts request, checks `AuthContext.user`.
+3. If no user is logged in, navigates to `/login` with previous location saved in state.
+4. If valid JWT exists in `localStorage`, session is restored on initial load.
 
