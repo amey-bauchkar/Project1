@@ -7,7 +7,7 @@ export const KanbanBoard = ({ issues = [], onCardClick }) => {
   const resolvedIssues = issues.filter((i) => i.status === 'Resolved');
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
       <KanbanColumn
         status="Pending"
         issues={pendingIssues}

@@ -20,7 +20,7 @@ const DEFAULT_CENTER = [23.3441, 85.3096]; // Ranchi, Jharkhand default coordina
 
 export const MapView = ({ issues = [], onMarkerClick }) => {
   return (
-    <div className="w-full h-[550px] rounded-xl overflow-hidden shadow-md border border-gray-200 bg-white relative">
+    <div className="w-full h-[550px] rounded-xl overflow-hidden shadow-card border border-gov-border bg-white relative">
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={13}
@@ -33,8 +33,6 @@ export const MapView = ({ issues = [], onMarkerClick }) => {
         />
 
         {issues.map((issue) => {
-          // MongoDB GeoJSON format: [longitude, latitude]
-          // Leaflet expects: [latitude, longitude]
           if (
             !issue.location ||
             !Array.isArray(issue.location.coordinates) ||
@@ -51,28 +49,28 @@ export const MapView = ({ issues = [], onMarkerClick }) => {
           return (
             <Marker key={issue._id || issue.id} position={[lat, lng]}>
               <Popup className="custom-map-popup">
-                <div className="p-3 max-w-[220px]">
+                <div className="p-3 max-w-[220px] font-sans">
                   {issue.imageUrl && (
                     <img
                       src={issue.imageUrl}
                       alt={issue.category}
-                      className="w-full h-24 object-cover rounded-md mb-2 bg-gray-100"
+                      className="w-full h-24 object-cover rounded-md mb-2 bg-gov-surface border border-gov-border"
                     />
                   )}
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="font-bold text-xs text-gray-900">{issue.category}</span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <span className="font-bold text-xs text-gov-navy uppercase tracking-wider">{issue.category}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gov-navy text-gov-accent">
                       {issue.status}
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-600 line-clamp-2 mb-2">
+                  <p className="text-[11px] text-gov-text-body line-clamp-2 mb-2 font-medium">
                     {issue.description}
                   </p>
                   <button
                     onClick={() => onMarkerClick && onMarkerClick(issue)}
-                    className="w-full text-center text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-1 px-2 rounded transition-colors"
+                    className="w-full text-center text-xs bg-gov-navy hover:bg-gov-navy-light text-white font-bold py-1.5 px-2 rounded transition-colors cursor-pointer"
                   >
-                    View & Update
+                    View Details & Update
                   </button>
                 </div>
               </Popup>
