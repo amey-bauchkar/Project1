@@ -52,3 +52,24 @@ Why Alternative Was Not Selected: `react-webcam` requires complex WebRTC permiss
 Impact: Lightweight, high-performance citizen mobile reporting with automatic multipart `FormData` transmission.
 Affected Modules: `frontend/janhavi/`
 
+## Decision 401 (Purva)
+
+Date: 2026-08-14
+Decision: Implemented Optimistic UI state updates for issue status changes with local rollback protection.
+Reason: Ensures instantaneous card movement across Kanban columns and instant modal responsiveness during fast hackathon evaluations without waiting for backend network roundtrips.
+Alternatives Considered: Blocking UI loader on every status change, purely synchronous local state without API wiring.
+Why Alternative Was Not Selected: Blocking UI feels sluggish to judges; purely mock state breaks integration with Amey's backend.
+Impact: `useIssues.js` updates state immediately and syncs asynchronously via `PATCH /api/issues/:id/status`.
+Affected Modules: frontend/purva
+
+## Decision 402 (Purva)
+
+Date: 2026-08-14
+Decision: Built an integrated Multi-View layout (Split View, Kanban Only, Live Map Only) with client-side category filtering.
+Reason: Municipal authorities need both high-level geographic clustering and operational column-based workflow in one responsive interface.
+Alternatives Considered: Separate standalone pages requiring route changes.
+Why Alternative Was Not Selected: Route switching adds click friction; keeping views toggleable in one dashboard preserves state and improves authority ergonomics.
+Impact: `AdminDashboard.jsx` seamlessly toggles views and filters data in-memory across both Kanban and Leaflet markers.
+Affected Modules: frontend/purva
+
+
