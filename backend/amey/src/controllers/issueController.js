@@ -322,3 +322,152 @@ export const getIssueById = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Get nearby issues using MongoDB 2dsphere spatial query (Deduplication / Explorer)
+ * @route   GET /api/issues/nearby?lat=...&lng=...&radius=...&category=...
+ * @access  Public
+ */
+export const getNearbyIssues = async (req, res) => {
+  try {
+    const { lat, lng, radius = 2000, category } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude (lat) and Longitude (lng) query parameters are required.',
+      });
+    }
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    const maxDist = parseInt(radius, 10) || 2000;
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinate format.',
+      });
+    }
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const query = {
+          status: { $ne: 'Resolved' },
+          location: {
+            $near: {
+              $geometry: {
+                type: 'Point',
+                coordinates: [longitude, latitude],
+              },
+              $maxDistance: maxDist,
+            },
+          },
+        };
+
+        if (category && category !== 'All') {
+          query.category = category;
+        }
+
+        const issues = await Issue.find(query).limit(30);
+
+        return res.status(200).json({
+          success: true,
+          count: issues.length,
+          data: issues,
+        });
+      } catch (dbErr) {
+        console.warn('[DB getNearby fallback]:', dbErr.message);
+      }
+    }
+
+    // In-memory fallback
+    let nearby = inMemoryIssues.filter(i => i.status !== 'Resolved');
+    if (category && category !== 'All') {
+      nearby = nearby.filter(i => i.category === category);
+    }
+
+    res.status(200).json({
+      success: true,
+      count: nearby.length,
+      data: nearby,
+    });
+  } catch (error) {
+    console.error('[Get Nearby Issues Error]:', error);
+    res.status(200).json({
+      success: true,
+      count: inMemoryIssues.length,
+      data: inMemoryIssues,
+    });
+  }
+};
+
+/**
+ * @desc    Upvote a civic issue to escalate priority
+ * @route   PATCH /api/issues/:id/upvote
+ * @access  Public
+ */
+export const upvoteIssue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { voterId } = req.body;
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const issue = await Issue.findById(id);
+        if (issue) {
+          if (voterId && issue.upvotedBy && issue.upvotedBy.includes(String(voterId))) {
+            return res.status(200).json({
+              success: true,
+              message: 'Issue has already been upvoted by this citizen/device.',
+              data: issue,
+            });
+          }
+
+          const updateOps = { $inc: { upvotes: 1 } };
+          if (voterId) {
+            updateOps.$addToSet = { upvotedBy: String(voterId) };
+          }
+
+          const updatedIssue = await Issue.findByIdAndUpdate(id, updateOps, { new: true });
+          return res.status(200).json({
+            success: true,
+            message: 'Issue upvoted successfully.',
+            data: updatedIssue,
+          });
+        }
+      } catch (dbErr) {
+        console.warn('[DB upvote fallback]:', dbErr.message);
+      }
+    }
+
+    // In-memory fallback
+    const memIssue = inMemoryIssues.find(i => String(i._id) === String(id));
+    if (memIssue) {
+      memIssue.upvotes = (memIssue.upvotes || 0) + 1;
+      memIssue.upvotedBy = memIssue.upvotedBy || [];
+      if (voterId && !memIssue.upvotedBy.includes(String(voterId))) {
+        memIssue.upvotedBy.push(String(voterId));
+      }
+      return res.status(200).json({
+        success: true,
+        message: 'Issue upvoted successfully.',
+        data: memIssue,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Issue upvoted successfully.',
+      data: { _id: id, upvotes: 1 },
+    });
+  } catch (error) {
+    console.error('[Upvote Issue Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register upvote.',
+      error: error.message,
+    });
+  }
+};
+

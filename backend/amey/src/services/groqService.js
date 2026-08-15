@@ -68,7 +68,7 @@ export const triageIssueWithVision = async (imageUrl, description) => {
     }
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.2-11b-vision-preview',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'system',
@@ -76,7 +76,7 @@ export const triageIssueWithVision = async (imageUrl, description) => {
         },
         {
           role: 'user',
-          content: userContent,
+          content: `Image URL: ${imageUrl || 'None'}\nCitizen description: "${description || 'Civic issue reported'}"`,
         },
       ],
       temperature: 0.1,

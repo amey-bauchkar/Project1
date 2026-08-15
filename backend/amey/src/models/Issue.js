@@ -38,6 +38,15 @@ const IssueSchema = new mongoose.Schema(
       enum: ['Pending', 'In Progress', 'Resolved'],
       default: 'Pending',
     },
+    upvotes: {
+      type: Number,
+      default: 1,
+    },
+    upvotedBy: [
+      {
+        type: String, // Anonymous voter ID, device UUID, or IP
+      },
+    ],
     createdAt: {
       type: Date,
       default: Date.now,
