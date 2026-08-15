@@ -1,0 +1,16 @@
+{
+  "name": "jharkhand-civic-command-center",
+  "version": "1.0.0",
+  "description": "Unified Crowdsourced Civic Issue Reporting and Resolution System (SIH25031)",
+  "scripts": {
+    "install:all": "npm --prefix backend/amey install && npm --prefix frontend install",
+    "dev:backend": "npm --prefix backend/amey run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start": "concurrently -n \"BACKEND,FRONTEND\" -c \"cyan,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "seed:admin": "npm --prefix backend/amey run seed:admin"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
