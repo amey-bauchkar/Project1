@@ -8,16 +8,21 @@ try {
   // Ignore if unable to override DNS servers
 }
 
+// Disable command buffering so queries fail immediately without delay when DB is disconnected
+mongoose.set('bufferCommands', false);
+
 /**
  * Connect to MongoDB database
  */
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/jharkhand_civic');
+    const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/jharkhand_civic';
+    const conn = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+    });
     console.log(`[MongoDB] Database Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`[MongoDB Connection Error]: ${error.message}`);
-    process.exit(1);
+    console.warn(`[MongoDB Warning] Could not connect to Atlas (${error.message}). Using resilient in-memory storage for civic issues.`);
   }
 };
 
