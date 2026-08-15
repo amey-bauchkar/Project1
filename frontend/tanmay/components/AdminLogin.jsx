@@ -47,56 +47,36 @@ export const AdminLogin = () => {
 
       if (response.ok) {
         const data = await response.json();
-        const token = data.token || 'jwt_token_jharkhand_admin_' + Date.now();
-        const userData = {
-          email: email.trim(),
-          role: data.role || 'admin',
-        };
-        login(token, userData);
-        navigate(redirectPath, { replace: true });
-        return;
-      }
-
-      if (response.status === 401) {
-        setError('Invalid credentials');
-        return;
-      }
-
-      // If backend is offline / 502 / 504 gateway error from dev proxy
-      if (response.status >= 500 || response.status === 502 || response.status === 504) {
-        if (email.trim() === 'admin@jharkhand.gov' && password.trim() === 'password123') {
-          const demoToken = 'mock_jwt_token_jharkhand_admin_' + Date.now();
-          login(demoToken, { email: 'admin@jharkhand.gov', role: 'admin' });
-          navigate(redirectPath, { replace: true });
+        if (!data.token) {
+          setError('Authentication failed. No token received.');
           return;
         }
-        setError('Invalid credentials');
+        const userRole = data.role || (data.user?.role) || 'admin';
+        const userData = {
+          email: email.trim(),
+          role: userRole,
+          name: data.user?.name || '',
+          department: data.user?.department || '',
+        };
+        login(data.token, userData);
+
+        // Role-based destination
+        const destination = location.state?.from?.pathname || (userRole === 'worker' ? '/worker' : '/admin');
+        navigate(destination, { replace: true });
         return;
       }
 
       const errData = await response.json().catch(() => ({}));
-      setError(errData.message || 'Invalid credentials');
+      setError(errData.message || 'Invalid email or password.');
     } catch (err) {
-      console.warn('Backend server not reachable on /api/auth/login. Using demo fallback:', err);
-      
-      // Standalone development fallback for IGNITE 8.0 demo testing
-      if (email.trim() === 'admin@jharkhand.gov' && password.trim() === 'password123') {
-        const demoToken = 'mock_jwt_token_jharkhand_admin_' + Date.now();
-        login(demoToken, { email: 'admin@jharkhand.gov', role: 'admin' });
-        navigate(redirectPath, { replace: true });
-      } else {
-        setError('Invalid credentials');
-      }
+      console.error('Login error:', err);
+      setError('Unable to connect to server. Please ensure the backend is running.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFillDemoCredentials = () => {
-    setEmail('admin@jharkhand.gov');
-    setPassword('password123');
-    setError('');
-  };
+
 
   return (
     <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center px-4 py-14 bg-gov-surface">
@@ -148,7 +128,7 @@ export const AdminLogin = () => {
               id="admin-email"
               type="email"
               label="Official Government Email"
-              placeholder="admin@jharkhand.gov"
+              placeholder="admin@jharkhand.gov.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               icon={Mail}
@@ -182,20 +162,7 @@ export const AdminLogin = () => {
             </Button>
           </form>
 
-          {/* Quick Demo Credentials Badge for Testing */}
-          <div className="mt-6 pt-5 border-t border-gov-border">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              fullWidth
-              onClick={handleFillDemoCredentials}
-              icon={KeyRound}
-              className="text-xs text-gov-muted hover:text-gov-navy border border-gov-border hover:bg-gov-surface"
-            >
-              Click to Autofill Demo Credentials
-            </Button>
-          </div>
+
 
         </Card>
 

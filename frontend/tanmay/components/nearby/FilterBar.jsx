@@ -1,7 +1,16 @@
 import React from 'react';
 import { Filter, SlidersHorizontal, Flame, Navigation } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
-const CATEGORIES = ['All', 'Roads', 'Water', 'Sanitation', 'Electricity', 'Other'];
+const RAW_CATEGORIES = [
+  { key: 'dept.all', raw: 'All', defaultVal: 'All' },
+  { key: 'dept.roads', raw: 'Roads', defaultVal: 'Roads' },
+  { key: 'dept.water', raw: 'Water', defaultVal: 'Water' },
+  { key: 'dept.sanitation', raw: 'Sanitation', defaultVal: 'Sanitation' },
+  { key: 'dept.electricity', raw: 'Electricity', defaultVal: 'Electricity' },
+  { key: 'dept.other', raw: 'Other', defaultVal: 'Other' },
+];
+
 const RADII = [
   { label: '500m', value: 500 },
   { label: '1 km', value: 1000 },
@@ -18,35 +27,38 @@ export const FilterBar = ({
   onSelectSort,
   totalCount,
 }) => {
+  const { t } = useLanguage();
+
   return (
-    <div className="bg-white rounded-xl border border-gov-border p-4 sm:p-5 shadow-card space-y-4 mb-6">
+    <div className="bg-white rounded-xl border border-gov-border p-4 sm:p-5 shadow-card space-y-4 mb-6 font-sans">
       
       {/* Top row: Category Pills */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-[11px] font-bold text-gov-muted uppercase tracking-wider flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-gov-navy" />
-            Infrastructure Category
+            <span>{t('nearby.category')}</span>
           </span>
           <span className="text-xs text-gov-muted font-bold font-mono">
-            {totalCount} report{totalCount === 1 ? '' : 's'} in range
+            {totalCount} {t('nearby.reportsInRange')}
           </span>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {CATEGORIES.map((cat) => {
-            const isActive = selectedCategory === cat;
+          {RAW_CATEGORIES.map((catObj) => {
+            const isActive = selectedCategory === catObj.raw;
+            const label = t(catObj.key) || catObj.defaultVal;
             return (
               <button
-                key={cat}
+                key={catObj.raw}
                 type="button"
-                onClick={() => onSelectCategory(cat)}
+                onClick={() => onSelectCategory(catObj.raw)}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-150 border ${
                   isActive
                     ? 'bg-gov-navy text-white border-gov-navy shadow-soft'
                     : 'bg-gov-surface text-gov-muted hover:text-gov-navy hover:bg-slate-200 border-gov-border'
                 }`}
               >
-                {cat}
+                {label}
               </button>
             );
           })}
@@ -60,7 +72,7 @@ export const FilterBar = ({
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-gov-muted uppercase tracking-wider flex items-center gap-1">
             <SlidersHorizontal className="w-3 h-3 text-gov-navy" />
-            Radius:
+            <span>{t('nearby.radius')}</span>
           </span>
           <div className="inline-flex bg-gov-surface p-1 rounded-lg border border-gov-border">
             {RADII.map((r) => (
@@ -82,7 +94,9 @@ export const FilterBar = ({
 
         {/* Sort selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gov-muted uppercase tracking-wider">Sort By:</span>
+          <span className="text-xs font-bold text-gov-muted uppercase tracking-wider">
+            {t('nearby.sortBy')}
+          </span>
           <div className="inline-flex bg-gov-surface p-1 rounded-lg border border-gov-border">
             <button
               type="button"
@@ -94,7 +108,7 @@ export const FilterBar = ({
               }`}
             >
               <Navigation className="w-3 h-3 text-gov-navy" />
-              Closest
+              <span>{t('nearby.closest')}</span>
             </button>
             <button
               type="button"
@@ -106,7 +120,7 @@ export const FilterBar = ({
               }`}
             >
               <Flame className="w-3 h-3 text-amber-500" />
-              Highest Upvotes
+              <span>{t('nearby.highestUpvotes')}</span>
             </button>
           </div>
         </div>

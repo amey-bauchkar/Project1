@@ -17,8 +17,10 @@ import useNearbyIssues from '../../hooks/useNearbyIssues';
 import FilterBar from './FilterBar';
 import NearbyIssueCard from './NearbyIssueCard';
 import { Button, Badge, Footer } from '../../../src/components/ui';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 export const NearbyIssuesView = () => {
+  const { t } = useLanguage();
   const {
     issues,
     loading,
@@ -40,7 +42,7 @@ export const NearbyIssuesView = () => {
   const totalUpvotesInArea = issues.reduce((sum, item) => sum + (item.upvotes || 1), 0);
 
   return (
-    <div className="min-h-screen bg-gov-surface py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gov-surface py-8 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Top Breadcrumb Header */}
@@ -50,10 +52,10 @@ export const NearbyIssuesView = () => {
             className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gov-muted hover:text-gov-navy transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Command Center</span>
+            <span>{t('nearby.back')}</span>
           </Link>
           <Badge variant="accent" size="xs" icon={Sparkles}>
-            Geospatial Prioritization Engine
+            {t('nearby.engineBadge')}
           </Badge>
         </div>
 
@@ -64,13 +66,13 @@ export const NearbyIssuesView = () => {
             
             <div className="space-y-2">
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-gov-accent bg-gov-navy-light px-2.5 py-1 rounded border border-gov-accent/30 inline-block">
-                Public Infrastructure Tracking
+                {t('nearby.trackingTag')}
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                Civic Issues Near You
+                {t('nearby.title')}
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl font-medium leading-relaxed">
-                Explore real-time infrastructure grievances within your neighborhood radius. Upvote existing verified issues to escalate municipal dispatch priority without duplicate reporting.
+                {t('nearby.subtitle')}
               </p>
             </div>
 
@@ -78,7 +80,7 @@ export const NearbyIssuesView = () => {
             <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 bg-gov-navy-light/90 backdrop-blur-md rounded-xl p-4 border border-white/10 shrink-0">
               <div className="text-left sm:text-right">
                 <span className="text-[10px] text-gov-accent font-bold uppercase tracking-wider">
-                  Community Upvotes
+                  {t('nearby.communityUpvotes')}
                 </span>
                 <div className="text-2xl font-black text-white flex items-center gap-1.5 sm:justify-end">
                   <Flame className="w-5 h-5 text-amber-400 fill-amber-400" />
@@ -92,7 +94,7 @@ export const NearbyIssuesView = () => {
                   icon={PlusCircle}
                   className="text-xs font-bold"
                 >
-                  Report New
+                  {t('nearby.reportNew')}
                 </Button>
               </Link>
             </div>
@@ -113,7 +115,7 @@ export const NearbyIssuesView = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gov-muted">
-                  Active Geolocation Feed
+                  {t('nearby.activeFeed')}
                 </span>
                 <span className={`inline-block w-2 h-2 rounded-full ${
                   locationStatus === 'granted' ? 'bg-emerald-500' : 'bg-amber-500'
@@ -138,7 +140,7 @@ export const NearbyIssuesView = () => {
             icon={RotateCw}
             className="text-xs"
           >
-            Update GPS
+            {t('nearby.updateGps')}
           </Button>
         </div>
 
@@ -146,7 +148,7 @@ export const NearbyIssuesView = () => {
         <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-amber-950 text-xs sm:text-sm shadow-soft">
           <Info className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
           <p className="leading-relaxed font-semibold">
-            <strong className="font-extrabold text-amber-950">Civic Action Advisory:</strong> Each upvote increases the issue's weight score on the Municipal Admin Kanban Board. Higher upvoted issues are prioritized by zonal engineering squads.
+            {t('nearby.advisory')}
           </p>
         </div>
 
@@ -188,7 +190,7 @@ export const NearbyIssuesView = () => {
               size="sm"
               onClick={refetch}
             >
-              Retry Connection
+              {t('nearby.retry')}
             </Button>
           </div>
         ) : issues.length === 0 ? (
@@ -198,10 +200,10 @@ export const NearbyIssuesView = () => {
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-bold text-gov-navy">
-                No Pending Grievances in this Radius
+                {t('nearby.noIssues')}
               </h3>
               <p className="text-xs text-gov-muted max-w-md mx-auto">
-                No unresolved problems found within {radius >= 1000 ? `${radius / 1000}km` : `${radius}m`}. If you spot an infrastructure issue, be the first to report it to the Jharkhand municipal department.
+                {t('nearby.noIssuesDesc')}
               </p>
             </div>
             <Link to="/report">
@@ -210,7 +212,7 @@ export const NearbyIssuesView = () => {
                 size="sm"
                 icon={PlusCircle}
               >
-                Submit New Grievance
+                {t('nearby.submitNew')}
               </Button>
             </Link>
           </div>

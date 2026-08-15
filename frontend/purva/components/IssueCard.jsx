@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, Tag, Clock, Image as ImageIcon, MapPin } from 'lucide-react';
 import Badge from '../../src/components/ui/Badge';
+import { useLanguage } from '../../tanmay/i18n/LanguageContext';
 
 const SEVERITY_BADGE_VARIANTS = {
   High: 'danger',
@@ -8,30 +9,47 @@ const SEVERITY_BADGE_VARIANTS = {
   Low: 'info',
 };
 
+const CATEGORY_TRANSLATION_KEYS = {
+  Roads: 'dept.roads',
+  Sanitation: 'dept.sanitation',
+  Water: 'dept.water',
+  Electricity: 'dept.electricity',
+  Other: 'dept.other',
+};
+
+const SEVERITY_TRANSLATION_KEYS = {
+  High: 'severity.high',
+  Medium: 'severity.medium',
+  Low: 'severity.low',
+};
+
 export const IssueCard = ({ issue, onClick }) => {
+  const { t } = useLanguage();
   const { category, imageUrl, createdAt, severity, description, status } = issue;
   
   const severityVariant = SEVERITY_BADGE_VARIANTS[severity] || 'surface';
+  const categoryLabel = t(CATEGORY_TRANSLATION_KEYS[category]) || category || 'General';
+  const severityLabel = t(SEVERITY_TRANSLATION_KEYS[severity]) || severity;
 
   const formattedDate = createdAt
     ? new Date(createdAt).toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
       })
-    : 'Recently';
+    : t('kanban.recently');
 
   return (
     <div
       onClick={() => onClick(issue)}
-      className="bg-white border border-gov-border hover:border-gov-navy hover:shadow-card transition-all duration-150 rounded-lg p-3.5 mb-2.5 cursor-pointer select-none group"
+      className="bg-white border border-gov-border hover:border-gov-navy hover:shadow-card transition-all duration-150 rounded-lg p-3.5 mb-2.5 cursor-pointer select-none group font-sans"
     >
       {/* Top Badges Row */}
       <div className="flex items-center justify-between gap-1.5 mb-2.5">
         <span className="text-[11px] font-bold text-gov-navy bg-gov-surface border border-gov-border px-2 py-0.5 rounded uppercase tracking-wider truncate">
-          {category || 'General'}
+          {categoryLabel}
         </span>
         <Badge variant={severityVariant} size="xs" className="whitespace-nowrap flex-shrink-0">
-          {severity}
+          {severityLabel}
         </Badge>
       </div>
 
@@ -63,7 +81,7 @@ export const IssueCard = ({ issue, onClick }) => {
               <span>{formattedDate}</span>
             </span>
             <span className="text-gov-navy font-bold group-hover:text-gov-accent-dark flex items-center gap-0.5">
-              <span>View</span>
+              <span>{t('kanban.view')}</span>
               <ArrowRight className="w-3 h-3" />
             </span>
           </div>

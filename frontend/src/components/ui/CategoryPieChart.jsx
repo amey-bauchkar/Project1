@@ -2,6 +2,7 @@ import React, { useState, createContext, useContext } from 'react';
 import { PieChart as PieIcon, ArrowRight, Tag, BarChart3, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from './Button';
+import { useLanguage } from '../../../tanmay/i18n/LanguageContext';
 
 const PieContext = createContext(null);
 
@@ -151,7 +152,8 @@ export const PieCenter = ({ defaultLabel = 'Total' }) => {
  * Full Category Breakdown Analytics Card with PieChart, Legend and CTA
  */
 export const CategoryAnalyticsCard = ({ issues = [] }) => {
-  // Category Palette strictly matching the corporate website design
+  const { t } = useLanguage();
+
   const CATEGORY_COLORS = {
     Roads: '#1E2A45',        // Navy
     Sanitation: '#C5D86D',   // Accent Lime
@@ -160,12 +162,22 @@ export const CategoryAnalyticsCard = ({ issues = [] }) => {
     Other: '#94A3B8',        // Cool Slate
   };
 
-  const categories = ['Roads', 'Sanitation', 'Water', 'Electricity', 'Other'];
+  const CATEGORY_TRANSLATION_KEYS = {
+    Roads: 'dept.roads',
+    Sanitation: 'dept.sanitation',
+    Water: 'dept.water',
+    Electricity: 'dept.electricity',
+    Other: 'dept.other',
+  };
 
-  const categoryCounts = categories.map((cat) => {
+  const rawCategories = ['Roads', 'Sanitation', 'Water', 'Electricity', 'Other'];
+
+  const categoryCounts = rawCategories.map((cat) => {
     const count = issues.filter((i) => (i.category || 'Other') === cat).length;
+    const translatedLabel = t(CATEGORY_TRANSLATION_KEYS[cat]) || cat;
     return {
-      label: cat,
+      rawCategory: cat,
+      label: translatedLabel,
       value: count,
       color: CATEGORY_COLORS[cat] || '#1E2A45',
     };
@@ -183,15 +195,15 @@ export const CategoryAnalyticsCard = ({ issues = [] }) => {
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-gov-navy leading-none uppercase tracking-wide">
-              Issue Category Breakdown
+              {t('pie.breakdownTitle')}
             </h3>
             <p className="text-[11px] font-medium text-gov-muted mt-0.5">
-              Live distribution of reported civic grievances
+              {t('pie.breakdownDesc')}
             </p>
           </div>
         </div>
         <span className="text-[10px] font-bold bg-gov-surface text-gov-navy border border-gov-border px-2 py-0.5 rounded uppercase tracking-wider font-mono">
-          {total} Reports
+          {total} {t('pie.reports')}
         </span>
       </div>
 
@@ -199,22 +211,22 @@ export const CategoryAnalyticsCard = ({ issues = [] }) => {
       <div className="py-2 flex justify-center">
         <PieChart data={categoryCounts} innerRadius={58} size={190}>
           {categoryCounts.map((item, index) => (
-            <PieSlice index={index} key={item.label} />
+            <PieSlice index={index} key={item.rawCategory} />
           ))}
-          <PieCenter defaultLabel="Total" />
+          <PieCenter defaultLabel={t('pie.total')} />
         </PieChart>
       </div>
 
       {/* Legend & Breakdown List */}
       <div className="mt-5 pt-4 border-t border-gov-border space-y-2.5">
         <span className="text-[10px] font-bold uppercase tracking-widest text-gov-muted block mb-2">
-          Departmental Share
+          {t('pie.deptShare')}
         </span>
 
         {categoryCounts.map((item) => {
           const pct = total > 0 ? ((item.value / total) * 100).toFixed(0) : 0;
           return (
-            <div key={item.label} className="flex items-center justify-between text-xs">
+            <div key={item.rawCategory} className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span
                   className="w-3 h-3 rounded-sm flex-shrink-0"
@@ -250,11 +262,11 @@ export const CategoryAnalyticsCard = ({ issues = [] }) => {
             iconPosition="left"
             className="font-extrabold uppercase tracking-wider text-xs py-3 shadow-soft"
           >
-            Submit New Grievance Report
+            {t('pie.submitBtn')}
           </Button>
         </Link>
         <p className="text-[10px] text-center text-gov-muted mt-2 font-medium">
-          Opens full-screen mobile camera & GPS capture form
+          {t('pie.submitHint')}
         </p>
       </div>
     </div>

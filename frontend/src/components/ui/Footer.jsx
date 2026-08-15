@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Mail, Phone, MapPin, Send, Check } from 'lucide-react';
 import Button from './Button';
+import { useLanguage } from '../../../tanmay/i18n/LanguageContext';
 
 /**
- * 4-Column Corporate Government Footer Component
+ * 4-Column Corporate Government Footer Component with i18n
  */
 export const Footer = () => {
+  const { t } = useLanguage();
   const [feedbackEmail, setFeedbackEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -22,7 +24,7 @@ export const Footer = () => {
   };
 
   return (
-    <footer className="bg-gov-navy text-slate-300 border-t border-gov-navy-light pt-14 pb-8">
+    <footer className="bg-gov-navy text-slate-300 border-t border-gov-navy-light pt-14 pb-8 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-white/10">
           
@@ -34,7 +36,7 @@ export const Footer = () => {
               </div>
               <div>
                 <span className="font-extrabold text-base text-white tracking-tight block">
-                  Jharkhand Civic Portal
+                  {t('footer.aboutTitle')}
                 </span>
                 <span className="text-[10px] text-gov-accent uppercase tracking-widest font-bold block">
                   Govt. of Jharkhand
@@ -42,7 +44,7 @@ export const Footer = () => {
               </div>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Official crowdsourced civic grievance reporting and resolution monitoring platform. Built for the citizens and municipal authorities of Jharkhand.
+              {t('footer.aboutText')}
             </p>
             <div className="mt-4 text-[11px] text-slate-400 space-y-1">
               <p className="flex items-center gap-2">
@@ -59,27 +61,27 @@ export const Footer = () => {
           {/* Column 2: Quick Links */}
           <div>
             <h5 className="text-xs font-bold uppercase tracking-widest text-white mb-4">
-              Quick Navigation
+              {t('footer.quickNav')}
             </h5>
             <ul className="space-y-2.5 text-xs text-slate-400">
               <li>
                 <Link to="/" className="hover:text-gov-accent transition-colors">
-                  Citizen Reporting Portal
+                  {t('footer.citizenPortal')}
                 </Link>
               </li>
               <li>
                 <Link to="/report" className="hover:text-gov-accent transition-colors">
-                  Mobile Camera & GPS Report
+                  {t('footer.mobileReport')}
                 </Link>
               </li>
               <li>
                 <Link to="/admin" className="hover:text-gov-accent transition-colors">
-                  Municipal Admin Dashboard
+                  {t('footer.adminDashboard')}
                 </Link>
               </li>
               <li>
                 <Link to="/login" className="hover:text-gov-accent transition-colors">
-                  Authority Login Access
+                  {t('footer.authLogin')}
                 </Link>
               </li>
             </ul>
@@ -88,23 +90,23 @@ export const Footer = () => {
           {/* Column 3: Civic Services & Categories */}
           <div>
             <h5 className="text-xs font-bold uppercase tracking-widest text-white mb-4">
-              Civic Departments
+              {t('footer.departments')}
             </h5>
             <ul className="space-y-2.5 text-xs text-slate-400">
               <li className="flex items-center justify-between">
-                <span>Roads & Pothole Repairs</span>
+                <span>{t('footer.roads')}</span>
                 <span className="text-[10px] text-gov-accent font-bold">ACTIVE</span>
               </li>
               <li className="flex items-center justify-between">
-                <span>Sanitation & Waste Disposal</span>
+                <span>{t('footer.sanitation')}</span>
                 <span className="text-[10px] text-gov-accent font-bold">ACTIVE</span>
               </li>
               <li className="flex items-center justify-between">
-                <span>Water Supply & Pipeline Leaks</span>
+                <span>{t('footer.water')}</span>
                 <span className="text-[10px] text-gov-accent font-bold">ACTIVE</span>
               </li>
               <li className="flex items-center justify-between">
-                <span>Street Lighting & Electrical</span>
+                <span>{t('footer.lighting')}</span>
                 <span className="text-[10px] text-gov-accent font-bold">ACTIVE</span>
               </li>
             </ul>
@@ -113,10 +115,10 @@ export const Footer = () => {
           {/* Column 4: Contact / Newsletter Form */}
           <div>
             <h5 className="text-xs font-bold uppercase tracking-widest text-white mb-4">
-              Citizen Feedback & Alerts
+              {t('footer.feedbackTitle')}
             </h5>
             <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-              Subscribe to municipal status bulletins and area maintenance advisories.
+              {t('footer.feedbackText')}
             </p>
             <form onSubmit={handleFeedbackSubmit} className="space-y-2">
               <div className="relative">
@@ -137,7 +139,7 @@ export const Footer = () => {
                 icon={submitted ? Check : Send}
                 className="font-bold text-xs py-2"
               >
-                {submitted ? 'Subscribed' : 'Subscribe to Alerts'}
+                {submitted ? t('footer.subscribed') : t('footer.subscribe')}
               </Button>
             </form>
           </div>
@@ -146,7 +148,7 @@ export const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Government of Jharkhand. All rights reserved. SIH25031 Practice System.</p>
+          <p>© {new Date().getFullYear()} {t('footer.rights')} SIH25031 Practice System.</p>
           <div className="flex items-center gap-6">
             <span className="hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
             <span className="hover:text-white transition-colors cursor-pointer">Terms of Service</span>

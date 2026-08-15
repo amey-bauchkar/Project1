@@ -1,60 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-
-// Sample fallback data for independent frontend development & testing
-const MOCK_FALLBACK_ISSUES = [
-  {
-    _id: 'mock-1',
-    description: 'Deep pothole on Main Road causing severe traffic congestion and bike accidents near Albert Ekka Chowk.',
-    imageUrl: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=600&q=80',
-    location: {
-      type: 'Point',
-      coordinates: [85.3240, 23.3700] // [lng, lat]
-    },
-    category: 'Roads',
-    severity: 'High',
-    status: 'Pending',
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
-  },
-  {
-    _id: 'mock-2',
-    description: 'Main pipeline burst, fresh drinking water flooding the street for past 12 hours.',
-    imageUrl: 'https://images.unsplash.com/photo-1584467735871-8e85353a8413?auto=format&fit=crop&w=600&q=80',
-    location: {
-      type: 'Point',
-      coordinates: [85.3096, 23.3441] // [lng, lat]
-    },
-    category: 'Water',
-    severity: 'High',
-    status: 'In Progress',
-    createdAt: new Date(Date.now() - 3600000 * 6).toISOString()
-  },
-  {
-    _id: 'mock-3',
-    description: 'Overflowing municipal garbage bin near local market area creating foul odor and hygiene hazard.',
-    imageUrl: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80',
-    location: {
-      type: 'Point',
-      coordinates: [85.2980, 23.3550] // [lng, lat]
-    },
-    category: 'Sanitation',
-    severity: 'Medium',
-    status: 'Pending',
-    createdAt: new Date(Date.now() - 3600000 * 18).toISOString()
-  },
-  {
-    _id: 'mock-4',
-    description: 'Streetlight pole wire loose and flickering constantly on 4th cross lane.',
-    imageUrl: 'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=600&q=80',
-    location: {
-      type: 'Point',
-      coordinates: [85.3350, 23.3320] // [lng, lat]
-    },
-    category: 'Electricity',
-    severity: 'Low',
-    status: 'Resolved',
-    createdAt: new Date(Date.now() - 3600000 * 48).toISOString()
-  }
-];
+import { getAuthHeaders, getToken } from '../../tanmay/utils/auth';
 
 export const useIssues = () => {
   const [issues, setIssues] = useState([]);
@@ -65,23 +10,21 @@ export const useIssues = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/issues');
+      const response = await fetch('/api/issues?limit=100');
       if (!response.ok) {
         throw new Error(`Failed to fetch issues: ${response.statusText}`);
       }
       const data = await response.json();
       if (data && data.success && Array.isArray(data.data)) {
         setIssues(data.data);
-      } else if (Array.isArray(data)) {
-        setIssues(data);
       } else {
-        setIssues(MOCK_FALLBACK_ISSUES);
+        setIssues([]);
+        setError('No issues data received from server.');
       }
     } catch (err) {
-      console.warn('[useIssues] Live backend not reachable or returned error, using fallback data:', err.message);
-      // Fallback mock issues for resilient standalone UI development
-      setIssues((prev) => (prev.length > 0 ? prev : MOCK_FALLBACK_ISSUES));
-      setError(null);
+      console.error('[useIssues] Fetch error:', err.message);
+      setIssues([]);
+      setError('Unable to connect to the backend server. Please ensure it is running.');
     } finally {
       setLoading(false);
     }
@@ -92,25 +35,26 @@ export const useIssues = () => {
   }, [fetchIssues]);
 
   const updateIssueStatus = async (issueId, newStatus) => {
-    // 1. Optimistic UI update
+    // Optimistic UI update
     setIssues((prevIssues) =>
       prevIssues.map((issue) =>
-        (issue._id === issueId || String(issue._id) === String(issueId) || issue.id === issueId)
-          ? { ...issue, status: newStatus }
-          : issue
+        issue._id === issueId ? { ...issue, status: newStatus } : issue
       )
     );
 
     try {
-      const token = localStorage.getItem('token') || 'mock_jwt_token_jharkhand_admin';
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      };
+      const token = getToken();
+      if (!token) {
+        setError('Authentication required to update issue status.');
+        return false;
+      }
 
       const response = await fetch(`/api/issues/${issueId}/status`, {
         method: 'PATCH',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -119,19 +63,23 @@ export const useIssues = () => {
         if (result.success && result.data) {
           setIssues((prevIssues) =>
             prevIssues.map((issue) =>
-              (issue._id === issueId || String(issue._id) === String(issueId) || issue.id === issueId)
-                ? { ...issue, ...result.data, status: newStatus }
-                : issue
+              issue._id === issueId ? { ...issue, ...result.data } : issue
             )
           );
         }
+        return true;
+      } else if (response.status === 401) {
+        setError('Session expired. Please login again.');
+        return false;
       } else {
-        console.warn('[useIssues] Server returned non-ok response:', response.status);
+        const errData = await response.json().catch(() => ({}));
+        setError(errData.message || 'Failed to update status.');
+        return false;
       }
-      return true;
     } catch (err) {
-      console.warn('[useIssues] Network error during status update:', err.message);
-      return true;
+      console.error('[useIssues] Status update error:', err.message);
+      setError('Network error. Please check your connection.');
+      return false;
     }
   };
 
@@ -140,7 +88,7 @@ export const useIssues = () => {
     loading,
     error,
     refetch: fetchIssues,
-    updateIssueStatus
+    updateIssueStatus,
   };
 };
 

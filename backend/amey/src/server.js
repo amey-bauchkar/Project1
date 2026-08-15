@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import issueRoutes from './routes/issueRoutes.js';
@@ -11,12 +12,21 @@ dotenv.config();
 
 const app = express();
 
-// Standard Middlewares
+import { globalLimiter } from './middleware/rateLimiter.js';
+
+app.use(globalLimiter);
+
+// ─── CORS Configuration ────────────────────────────────────────────
 app.use(
   cors({
-    origin: '*', // Allow all frontends during development
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      process.env.FRONTEND_URL,
+    ].filter(Boolean),
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   })
 );
 
@@ -58,3 +68,4 @@ const startServer = async () => {
 startServer();
 
 export default app;
+

@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { MapPin, Crosshair, RefreshCw, AlertTriangle, CheckCircle2, Navigation } from "lucide-react";
 import { getCurrentCoordinates, formatCoordinates, reverseGeocode } from "../utils/geoHelper";
 import Button from "../../src/components/ui/Button";
+import { useLanguage } from "../../tanmay/i18n/LanguageContext";
 
 /**
- * LocationPicker Component
+ * LocationPicker Component with i18n
  * Handles GPS fetching, accuracy indicator, and coordinates display for civic reports.
  */
 export default function LocationPicker({
@@ -13,6 +14,7 @@ export default function LocationPicker({
   onLocationChange,
   disabled = false
 }) {
+  const { t } = useLanguage();
   const [isFetching, setIsFetching] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
@@ -46,13 +48,13 @@ export default function LocationPicker({
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs font-bold uppercase tracking-wider text-gov-navy flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 text-gov-navy" />
-          <span>Incident Location</span>
+          <span>{t('report.incidentLocation')}</span>
           <span className="text-rose-600">*</span>
         </label>
         {hasLocation && (
           <span className="text-[11px] font-bold text-gov-navy bg-gov-accent/20 px-2 py-0.5 rounded border border-gov-accent-dark/30 flex items-center gap-1 uppercase tracking-wider">
             <span className="w-1.5 h-1.5 rounded-full bg-gov-navy" />
-            GPS Locked
+            {t('report.gpsLocked')}
           </span>
         )}
       </div>
@@ -73,7 +75,7 @@ export default function LocationPicker({
             {isFetching ? (
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gov-navy">
                 <RefreshCw className="w-4 h-4 animate-spin text-gov-navy" />
-                <span>Acquiring Precise Geolocation...</span>
+                <span>{t('report.acquiringGps')}</span>
               </div>
             ) : (
               <>
@@ -81,8 +83,8 @@ export default function LocationPicker({
                   <Navigation className="w-5 h-5" />
                 </div>
                 <div className="text-left flex-1">
-                  <p className="font-bold text-gov-navy text-sm">Tag Current GPS Location</p>
-                  <p className="text-xs text-gov-muted font-medium">Auto-tags precise coordinates for field workers</p>
+                  <p className="font-bold text-gov-navy text-sm">{t('report.tagGps')}</p>
+                  <p className="text-xs text-gov-muted font-medium">{t('report.autoTags')}</p>
                 </div>
               </>
             )}
@@ -92,14 +94,14 @@ export default function LocationPicker({
             <div className="mt-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-600 mt-0.5" />
               <div className="flex-1">
-                <p className="font-bold">GPS Acquisition Error</p>
+                <p className="font-bold">{t('report.gpsError')}</p>
                 <p className="mt-0.5">{errorMsg}</p>
                 <button
                   type="button"
                   onClick={handleGetLocation}
                   className="mt-1 text-xs font-bold text-rose-900 underline hover:text-rose-950"
                 >
-                  Retry Acquisition
+                  {t('report.retryGps')}
                 </button>
               </div>
             </div>
@@ -115,7 +117,7 @@ export default function LocationPicker({
               </div>
               <div>
                 <p className="text-[10px] font-bold text-gov-muted uppercase tracking-widest">
-                  Location Verified
+                  {t('report.locVerified')}
                 </p>
                 <p className="text-sm font-bold text-gov-navy font-mono">
                   {formatCoordinates(latitude, longitude)}
@@ -132,7 +134,7 @@ export default function LocationPicker({
               icon={RefreshCw}
               className="text-xs"
             >
-              Refresh
+              {t('report.refreshGps')}
             </Button>
           </div>
 
@@ -146,9 +148,9 @@ export default function LocationPicker({
           {accuracy && (
             <div className="mt-2.5 flex items-center gap-2 text-[11px] text-gov-muted font-bold uppercase tracking-wider">
               <Crosshair className="w-3 h-3 text-gov-navy" />
-              <span>Accuracy: ±{accuracy} meters</span>
+              <span>{t('report.accuracy')}: ±{accuracy} meters</span>
               <span>•</span>
-              <span>GeoJSON Indexed</span>
+              <span>{t('report.geoIndexed')}</span>
             </div>
           )}
         </div>

@@ -1,24 +1,32 @@
 import React, { useState } from "react";
-import { Building2, Send, AlertCircle, Loader2, CheckCircle2, Shield } from "lucide-react";
+import { Building2, Send, AlertCircle, Loader2, CheckCircle2, Shield, ThumbsUp, ArrowRight, X } from "lucide-react";
 import CameraCapture from "./CameraCapture";
 import LocationPicker from "./LocationPicker";
 import SubmissionForm from "./SubmissionForm";
 import SuccessScreen from "./SuccessScreen";
 import Button from "../../src/components/ui/Button";
+import { useLanguage } from "../../tanmay/i18n/LanguageContext";
+import { upvoteIssue } from "../../tanmay/services/nearbyService";
 
 /**
- * CitizenPortal Component (Main Container for Janhavi's Module)
+ * CitizenPortal Component
  * Mobile-first civic issue reporting container with camera capture, GPS acquisition,
- * Groq AI analysis indicator, and multipart FormData submission.
+ * duplicate detection, Groq Vision AI analysis, honeypot spam protection, and multilingual i18n.
  */
 export default function CitizenPortal({ apiBaseUrl = "" }) {
+  const { t } = useLanguage();
   const [imageFile, setImageFile] = useState(null);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [description, setDescription] = useState("");
+  const [honeypot, setHoneypot] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [submittedData, setSubmittedData] = useState(null);
+
+  // Duplicate detection state
+  const [duplicateData, setDuplicateData] = useState(null);
+  const [upvotedDuplicateIds, setUpvotedDuplicateIds] = useState([]);
 
   const handleImageSelected = (file) => {
     setImageFile(file);
@@ -40,15 +48,18 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
     setLatitude(null);
     setLongitude(null);
     setDescription("");
+    setHoneypot("");
     setErrorMessage(null);
     setSubmittedData(null);
+    setDuplicateData(null);
+    setUpvotedDuplicateIds([]);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, force = false) => {
     if (e) e.preventDefault();
     setErrorMessage(null);
 
-    // Validation according to specifications
+    // Validation
     if (!imageFile) {
       setErrorMessage("Photo evidence is required! Please snap or upload an image of the issue.");
       return;
@@ -59,57 +70,61 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
       return;
     }
 
+    if (description.trim().length < 20) {
+      setErrorMessage("Description must be at least 20 characters long for accurate AI triage.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Construct multipart/form-data payload
       const formData = new FormData();
       formData.append("image", imageFile);
-      formData.append("description", description.trim() || "Civic issue reported via citizen mobile portal");
+      formData.append("description", description.trim());
       formData.append("latitude", latitude);
       formData.append("longitude", longitude);
+      if (honeypot) formData.append("website", honeypot);
+      if (force) formData.append("force", "true");
 
       const endpoint = `${apiBaseUrl}/api/issues`;
       const response = await fetch(endpoint, {
         method: "POST",
-        body: formData
+        body: formData,
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        let errDetail = "Failed to submit issue";
-        try {
-          const errData = await response.json();
-          errDetail = errData.message || errData.error || errDetail;
-        } catch {
-          errDetail = `Server responded with status ${response.status}`;
-        }
-        throw new Error(errDetail);
+        throw new Error(result.message || `Server error (${response.status})`);
       }
 
-      const result = await response.json();
-      setSubmittedData(result);
-    } catch (err) {
-      console.warn("Submission Error, using demo fallback if offline:", err);
-      // If backend is offline in standalone testing, provide mock success response
-      if (err.message?.includes("Failed to fetch") || err.message?.includes("NetworkError") || err.message?.includes("not reachable")) {
-        setSubmittedData({
-          success: true,
-          data: {
-            _id: `66bb${Math.floor(10000000 + Math.random() * 90000000)}`,
-            category: description.toLowerCase().includes("garbage") ? "Sanitation" : "Roads",
-            severity: "High",
-            status: "Pending"
-          }
-        });
-      } else {
-        setErrorMessage(err.message || "An unexpected error occurred during submission.");
+      // Check if duplicate detected and not forced
+      if (result.isDuplicate && !force && result.existingIssues?.length > 0) {
+        setDuplicateData(result);
+        setIsSubmitting(false);
+        return;
       }
+
+      setSubmittedData(result);
+      setDuplicateData(null);
+    } catch (err) {
+      console.error("Submission Error:", err);
+      setErrorMessage(err.message || "An unexpected error occurred during submission.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // If already successfully submitted, show SuccessScreen
+  const handleUpvoteDuplicate = async (issueId) => {
+    try {
+      await upvoteIssue(issueId);
+      setUpvotedDuplicateIds((prev) => [...prev, issueId]);
+    } catch (err) {
+      console.error("Failed to upvote duplicate issue:", err);
+    }
+  };
+
+  // If successfully submitted, show SuccessScreen
   if (submittedData) {
     return (
       <div className="w-full max-w-xl mx-auto bg-white rounded-xl shadow-card border border-gov-border">
@@ -117,8 +132,6 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
       </div>
     );
   }
-
-  const isFormIncomplete = !imageFile || latitude === null || longitude === null;
 
   return (
     <div className="w-full max-w-xl mx-auto bg-white rounded-xl shadow-card border border-gov-border flex flex-col font-sans relative pb-6 antialiased">
@@ -131,15 +144,15 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
             </div>
             <div>
               <h2 className="text-sm font-extrabold text-gov-navy leading-none uppercase tracking-wide">
-                Citizen Grievance Submission
+                {t('report.title')}
               </h2>
               <p className="text-[11px] font-medium text-gov-muted mt-0.5">
-                Government of Jharkhand • Direct Reporting
+                {t('report.tagline')}
               </p>
             </div>
           </div>
           <span className="text-[10px] font-bold bg-gov-navy text-gov-accent px-2 py-0.5 rounded uppercase tracking-wider whitespace-nowrap">
-            Public Form
+            {t('report.publicForm')}
           </span>
         </div>
 
@@ -152,7 +165,7 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
                 : "bg-white text-gov-muted border-gov-border"
             }`}
           >
-            {imageFile ? "✓ 1. Photo" : "1. Photo *"}
+            {imageFile ? `✓ ${t('report.stepPhoto').replace(' *', '')}` : t('report.stepPhoto')}
           </div>
           <div
             className={`py-1.5 rounded border transition-colors ${
@@ -161,16 +174,16 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
                 : "bg-white text-gov-muted border-gov-border"
             }`}
           >
-            {latitude !== null ? "✓ 2. GPS" : "2. GPS *"}
+            {latitude !== null ? `✓ ${t('report.stepGps').replace(' *', '')}` : t('report.stepGps')}
           </div>
           <div
             className={`py-1.5 rounded border transition-colors ${
-              description.trim().length > 0
+              description.trim().length >= 20
                 ? "bg-gov-navy text-gov-accent border-gov-navy"
                 : "bg-white text-gov-muted border-gov-border"
             }`}
           >
-            {description.trim().length > 0 ? "✓ 3. Details" : "3. Details"}
+            {description.trim().length >= 20 ? `✓ ${t('report.stepDetails').replace(' *', '')}` : t('report.stepDetails')}
           </div>
         </div>
       </header>
@@ -194,7 +207,82 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        {/* Duplicate Detection Modal / Warning */}
+        {duplicateData && (
+          <div className="mb-5 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 shadow-card animate-fadeIn">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <h3 className="text-sm font-black text-amber-900">{t('duplicate.title')}</h3>
+              </div>
+              <button
+                onClick={() => setDuplicateData(null)}
+                className="text-amber-700 hover:text-amber-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-amber-800 mt-1 font-medium">
+              {t('duplicate.message')}
+            </p>
+
+            <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+              {duplicateData.existingIssues.map((dup) => (
+                <div
+                  key={dup._id}
+                  className="p-3 bg-white rounded-lg border border-amber-200 text-xs flex items-center justify-between gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gov-navy truncate">{dup.description}</p>
+                    <div className="flex items-center gap-2 text-[10px] text-gov-muted mt-0.5">
+                      <span className="font-mono">#{dup.trackingId || dup._id.slice(-6)}</span>
+                      <span>•</span>
+                      <span>{dup.status}</span>
+                      <span>•</span>
+                      <span>👍 {dup.upvotes || 0}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleUpvoteDuplicate(dup._id)}
+                    disabled={upvotedDuplicateIds.includes(dup._id)}
+                    className={`px-3 py-1.5 rounded text-[11px] font-bold flex items-center gap-1 transition-colors ${
+                      upvotedDuplicateIds.includes(dup._id)
+                        ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                        : "bg-gov-navy text-white hover:bg-gov-navy/90"
+                    }`}
+                  >
+                    <ThumbsUp className="w-3 h-3" />
+                    {upvotedDuplicateIds.includes(dup._id) ? "Upvoted ✓" : t('duplicate.upvoteExisting')}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-amber-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={(e) => handleSubmit(e, true)}
+                className="text-xs font-bold text-amber-900 hover:text-amber-950 underline px-2 py-1"
+              >
+                {t('duplicate.submitAnyway')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={(e) => handleSubmit(e, false)}>
+          {/* Honeypot field for bot protection */}
+          <input
+            type="text"
+            name="website"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            style={{ display: "none" }}
+            tabIndex="-1"
+            autoComplete="off"
+          />
+
           {/* Step 1: Camera / File Input */}
           <CameraCapture
             imageFile={imageFile}
@@ -229,12 +317,12 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
             iconPosition="right"
             className="font-black text-sm uppercase tracking-wider py-3.5 shadow-card"
           >
-            {isSubmitting ? "AI Triage In Progress..." : "Submit Grievance Report"}
+            {isSubmitting ? t('report.submitting') : t('report.submit')}
           </Button>
 
           {isSubmitting && (
             <p className="text-[11px] text-center text-gov-muted mt-2 font-medium">
-              Groq Llama 3.2 Vision is triaging your image & categorizing department...
+              {t('report.triageNote')}
             </p>
           )}
         </form>

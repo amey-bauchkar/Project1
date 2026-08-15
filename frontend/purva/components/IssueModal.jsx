@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { X, Tag, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Tag, Clock, MapPin, CheckCircle2, UserCheck, Building2, Brain, ThumbsUp, FileText, Image as ImageIcon } from 'lucide-react';
 import { Button, Badge } from '../../src/components/ui';
+import { getAuthHeaders, getToken } from '../../tanmay/utils/auth';
+import { useLanguage } from '../../tanmay/i18n/LanguageContext';
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved'];
 
@@ -10,13 +12,49 @@ const SEVERITY_BADGE_VARIANTS = {
   Low: 'info',
 };
 
-export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus }) => {
+export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus, onAssignWorker }) => {
+  const { t } = useLanguage();
   if (!isOpen || !issue) return null;
 
   const [selectedStatus, setSelectedStatus] = useState(issue.status || 'Pending');
+  const [selectedWorkerId, setSelectedWorkerId] = useState(issue.assignedTo?._id || issue.assignedTo || '');
+  const [workers, setWorkers] = useState([]);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState('');
 
-  const handleSave = async () => {
+  useEffect(() => {
+    // Fetch available workers for assignment dropdown using reliable auth headers
+    const fetchWorkers = async () => {
+      try {
+        const headers = getAuthHeaders();
+        const res = await fetch('/api/issues/workers/list', {
+          headers: {
+            ...headers,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.data)) {
+            setWorkers(data.data);
+          }
+        } else {
+          console.warn('Failed to load workers list, status:', res.status);
+        }
+      } catch (err) {
+        console.warn('Failed to load workers list:', err);
+      }
+    };
+
+    if (isOpen) {
+      fetchWorkers();
+      setSelectedStatus(issue.status || 'Pending');
+      setSelectedWorkerId(issue.assignedTo?._id || issue.assignedTo || '');
+      setAssignSuccess('');
+    }
+  }, [isOpen, issue]);
+
+  const handleSaveStatus = async () => {
     if (selectedStatus === issue.status) {
       onClose();
       return;
@@ -27,12 +65,47 @@ export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus }) => {
     onClose();
   };
 
+  const handleAssignWorker = async () => {
+    if (!selectedWorkerId) return;
+    setIsAssigning(true);
+    setAssignSuccess('');
+    try {
+      const headers = getAuthHeaders();
+      const res = await fetch(`/api/issues/${issue._id || issue.id}/assign`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({ workerId: selectedWorkerId }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAssignSuccess(data.message || 'Worker assigned successfully!');
+        setSelectedStatus('In Progress');
+        if (onUpdateStatus) {
+          await onUpdateStatus(issue._id || issue.id, 'In Progress');
+        }
+        if (onAssignWorker) {
+          onAssignWorker(data.data);
+        }
+      } else {
+        alert(data.message || 'Failed to assign worker.');
+      }
+    } catch (err) {
+      console.error('Assign worker error:', err);
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
   const severityVariant = SEVERITY_BADGE_VARIANTS[issue.severity] || 'surface';
   const lat = issue.location?.coordinates ? issue.location.coordinates[1] : null;
   const lng = issue.location?.coordinates ? issue.location.coordinates[0] : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gov-navy/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gov-navy/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-150 font-sans">
       <div
         className="bg-white rounded-xl shadow-elevated max-w-2xl w-full overflow-hidden border border-gov-border flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
@@ -42,6 +115,9 @@ export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus }) => {
           <div className="flex items-center gap-3">
             <span className="font-black text-gov-navy text-base tracking-tight uppercase">
               Grievance Detail
+            </span>
+            <span className="text-xs font-mono font-bold text-gov-navy bg-white px-2.5 py-1 rounded border border-gov-border">
+              #{issue.trackingId || String(issue._id || issue.id).slice(-8)}
             </span>
             <Badge variant="surface" size="xs">
               {issue.category}
@@ -71,7 +147,7 @@ export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus }) => {
             </div>
           )}
 
-          {/* Description */}
+          {/* Citizen Description */}
           <div>
             <h4 className="text-xs font-bold text-gov-navy uppercase tracking-wider mb-1.5">
               Citizen Description
@@ -81,22 +157,126 @@ export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus }) => {
             </p>
           </div>
 
+          {/* AI Triage & Department */}
+          {(issue.aiSummary || issue.department) && (
+            <div className="p-4 bg-gov-surface rounded-lg border border-gov-border space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-gov-navy uppercase tracking-wider">
+                <Brain className="w-4 h-4 text-gov-navy" />
+                <span>AI Automated Triage Breakdown</span>
+              </div>
+              {issue.department && (
+                <div className="flex items-center gap-2 text-xs">
+                  <Building2 className="w-3.5 h-3.5 text-gov-muted" />
+                  <span className="text-gov-muted font-medium">Routed Department:</span>
+                  <span className="font-bold text-gov-navy">{issue.department}</span>
+                </div>
+              )}
+              {issue.aiSummary && (
+                <p className="text-xs text-gov-muted font-medium leading-relaxed">
+                  {issue.aiSummary}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Metadata Grid */}
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div className="bg-gov-surface p-3.5 rounded-lg border border-gov-border">
-              <span className="text-[10px] uppercase font-bold text-gov-muted block mb-0.5 tracking-wider">Report Timestamp</span>
-              <span className="font-bold text-gov-navy">
-                {issue.createdAt ? new Date(issue.createdAt).toLocaleString('en-IN') : 'N/A'}
+          <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="bg-gov-surface p-3 rounded-lg border border-gov-border">
+              <span className="text-[10px] uppercase font-bold text-gov-muted block mb-0.5 tracking-wider">Reported</span>
+              <span className="font-bold text-gov-navy text-[11px]">
+                {issue.createdAt ? new Date(issue.createdAt).toLocaleDateString('en-IN') : 'N/A'}
               </span>
             </div>
 
-            <div className="bg-gov-surface p-3.5 rounded-lg border border-gov-border">
-              <span className="text-[10px] uppercase font-bold text-gov-muted block mb-0.5 tracking-wider">Geographic Coordinates</span>
-              <span className="font-mono font-bold text-gov-navy">
-                {lat != null && lng != null ? `${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E` : 'Not Available'}
+            <div className="bg-gov-surface p-3 rounded-lg border border-gov-border">
+              <span className="text-[10px] uppercase font-bold text-gov-muted block mb-0.5 tracking-wider">Coordinates</span>
+              <span className="font-mono font-bold text-gov-navy text-[11px]">
+                {lat != null && lng != null ? `${lat.toFixed(3)}°, ${lng.toFixed(3)}°` : 'N/A'}
+              </span>
+            </div>
+
+            <div className="bg-gov-surface p-3 rounded-lg border border-gov-border">
+              <span className="text-[10px] uppercase font-bold text-gov-muted block mb-0.5 tracking-wider">Community Votes</span>
+              <span className="font-bold text-gov-navy text-[11px] flex items-center gap-1">
+                <ThumbsUp className="w-3 h-3 text-gov-navy" />
+                {issue.upvotes || 1}
               </span>
             </div>
           </div>
+
+          {/* Worker Assignment Section */}
+          <div className="p-4 bg-gov-surface rounded-lg border border-gov-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-gov-navy uppercase tracking-wider">
+                <UserCheck className="w-4 h-4 text-gov-navy" />
+                <span>{t('admin.dispatch')}</span>
+              </div>
+              {issue.assignedTo && (
+                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                  Assigned ✓
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedWorkerId}
+                onChange={(e) => setSelectedWorkerId(e.target.value)}
+                className="flex-1 bg-white border border-gov-border rounded-lg px-3 py-2 text-xs font-bold text-gov-navy focus:outline-none focus:ring-2 focus:ring-gov-navy"
+              >
+                <option value="">{t('admin.selectWorker')}</option>
+                {workers.map((w) => (
+                  <option key={w._id} value={w._id}>
+                    {w.name || w.email} ({w.department || 'Field Ops'})
+                  </option>
+                ))}
+              </select>
+
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleAssignWorker}
+                disabled={!selectedWorkerId || isAssigning}
+                loading={isAssigning}
+                className="text-xs whitespace-nowrap font-bold"
+              >
+                {t('admin.assignWorker')}
+              </Button>
+            </div>
+
+            {assignSuccess && (
+              <p className="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {assignSuccess}
+              </p>
+            )}
+          </div>
+
+          {/* Resolution Details (if resolved) */}
+          {issue.status === 'Resolved' && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 uppercase tracking-wider">
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                <span>Resolution Record</span>
+              </div>
+              {issue.resolutionNotes && (
+                <p className="text-xs text-emerald-800 font-medium">
+                  <strong>Notes:</strong> {issue.resolutionNotes}
+                </p>
+              )}
+              {issue.resolutionImageUrl && (
+                <div className="mt-2">
+                  <span className="text-[10px] font-bold uppercase text-emerald-800 block mb-1">Resolution Photo Proof:</span>
+                  <img
+                    src={issue.resolutionImageUrl}
+                    alt="Resolution proof"
+                    className="w-48 h-32 object-cover rounded-lg border border-emerald-300"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Status Update Control */}
           <div className="pt-2 border-t border-gov-border">
@@ -126,16 +306,16 @@ export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus }) => {
             size="sm"
             onClick={onClose}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             variant="primary"
             size="sm"
-            onClick={handleSave}
+            onClick={handleSaveStatus}
             loading={isUpdating}
             icon={CheckCircle2}
           >
-            Save Status
+            {t('admin.saveStatus')}
           </Button>
         </div>
       </div>

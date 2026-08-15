@@ -1,48 +1,51 @@
 import React from 'react';
 import { Camera, MapPin, Cpu, CheckCircle, ArrowRight } from 'lucide-react';
 import Card from './Card';
+import { useLanguage } from '../../../tanmay/i18n/LanguageContext';
 
 /**
- * 4-Card Corporate Feature Strip Component
+ * 4-Card Corporate Feature Strip Component with i18n
  */
 export const FeatureStrip = ({ onCardAction }) => {
+  const { t } = useLanguage();
+
   const features = [
     {
       icon: Camera,
-      title: "Mobile Evidence Capture",
-      description: "Direct camera upload with high-resolution photo evidence verification.",
+      title: t('feature.photo.title'),
+      description: t('feature.photo.desc'),
       variant: "navy",
-      actionText: "Snap Photo",
+      actionText: t('feature.photo.action'),
       actionKey: "photo",
     },
     {
       icon: MapPin,
-      title: "High-Precision GPS",
-      description: "Automated geofence coordinates mapped directly for on-ground field personnel.",
+      title: t('feature.gps.title'),
+      description: t('feature.gps.desc'),
       variant: "white",
-      actionText: "View Map",
+      actionText: t('feature.gps.action'),
       actionKey: "map",
     },
     {
       icon: Cpu,
-      title: "Groq AI Auto-Triage",
-      description: "Vision AI model classifies department and assigns urgency scores in under 2 seconds.",
+      title: t('feature.ai.title'),
+      description: t('feature.ai.desc'),
       variant: "mutedBlue",
-      actionText: "Triage Engine",
+      actionText: t('feature.ai.action'),
       actionKey: "triage",
     },
     {
       icon: CheckCircle,
-      title: "Transparent Resolution",
-      description: "Live Kanban workflow tracking from submission to verified departmental completion.",
+      title: t('feature.res.title'),
+      description: t('feature.res.desc'),
       variant: "white",
-      actionText: "Track Status",
+      actionText: t('feature.res.action'),
       actionKey: "status",
     },
   ];
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20">
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20 font-sans">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {features.map((feature, idx) => {
           const Icon = feature.icon;

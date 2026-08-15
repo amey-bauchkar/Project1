@@ -1,66 +1,17 @@
 import mongoose from 'mongoose';
 import { Issue } from '../models/Issue.js';
+import { User } from '../models/User.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 import { triageIssueWithVision } from '../services/groqService.js';
 
 /**
- * @desc    Submit a new civic issue (Citizen)
- * @route   POST /api/issues
- * @access  Public (Multipart/form-data: image, description, latitude, longitude)
+ * Generate a human-readable tracking ID: JH-YYYYMMDD-XXXXX
  */
-// Resilient in-memory store for civic issues (seeded with Ranchi municipal data)
-let inMemoryIssues = [
-  {
-    _id: 'civic-001',
-    description: 'Deep hazardous pothole near Main Road Overbridge, causing dangerous vehicle swerving.',
-    imageUrl: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&auto=format&fit=crop&q=60',
-    location: { type: 'Point', coordinates: [85.3346, 23.3629] },
-    category: 'Pothole',
-    severity: 'High',
-    status: 'Pending',
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-  {
-    _id: 'civic-002',
-    description: 'Overflowing municipal garbage container at Doranda Market blocking pedestrian sidewalk.',
-    imageUrl: 'https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=600&auto=format&fit=crop&q=60',
-    location: { type: 'Point', coordinates: [85.3211, 23.3375] },
-    category: 'Garbage Dump',
-    severity: 'Medium',
-    status: 'In Progress',
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-  },
-  {
-    _id: 'civic-003',
-    description: 'Non-functional street lights along Kanke Road near Birsa Agricultural University.',
-    imageUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=60',
-    location: { type: 'Point', coordinates: [85.3188, 23.4124] },
-    category: 'Streetlight',
-    severity: 'Low',
-    status: 'Resolved',
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-  {
-    _id: 'civic-004',
-    description: 'Broken water supply pipeline flooding street at Morabadi Ground sector.',
-    imageUrl: 'https://images.unsplash.com/photo-1542010589005-d1eacc3918f2?w=600&auto=format&fit=crop&q=60',
-    location: { type: 'Point', coordinates: [85.3385, 23.3871] },
-    category: 'Water Leakage',
-    severity: 'High',
-    status: 'In Progress',
-    createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
-  },
-  {
-    _id: 'civic-005',
-    description: 'Open sewer drain without concrete cover near Harmu Housing Colony school.',
-    imageUrl: 'https://images.unsplash.com/photo-1584467735815-f778f274e296?w=600&auto=format&fit=crop&q=60',
-    location: { type: 'Point', coordinates: [85.3092, 23.3512] },
-    category: 'Drainage',
-    severity: 'High',
-    status: 'Pending',
-    createdAt: new Date(Date.now() - 3600000 * 1).toISOString(),
-  },
-];
+const generateTrackingId = () => {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const random = String(Date.now()).slice(-5);
+  return `JH-${date}-${random}`;
+};
 
 /**
  * @desc    Submit a new civic issue (Citizen)
@@ -75,7 +26,7 @@ export const createIssue = async (req, res) => {
     if (!file) {
       return res.status(400).json({
         success: false,
-        message: 'Image file is required.',
+        message: 'Image file is required as photo evidence.',
       });
     }
 
@@ -103,115 +54,174 @@ export const createIssue = async (req, res) => {
       });
     }
 
-    // Step 1: Upload image to Cloudinary (or fallback Data URI)
-    let imageUrl = 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&auto=format&fit=crop&q=60';
+    // Step 1: Upload image to Cloudinary
+    let imageUrl;
     try {
       imageUrl = await uploadToCloudinary(file.buffer, file.originalname);
     } catch (e) {
-      console.warn('[Cloudinary upload fallback]:', e.message);
+      console.error('[Cloudinary Upload Error]:', e.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image. Please try again.',
+      });
     }
 
-    // Step 2: Groq Vision AI Triage for Category & Severity
-    let category = 'General Civic Issue';
-    let severity = 'Medium';
+    // Step 2: AI Vision Triage for Category, Severity, Summary, Department
+    let triage = { category: 'Other', severity: 'Medium', summary: '', department: 'General Services', confidence: 0 };
     try {
-      const triage = await triageIssueWithVision(imageUrl, description);
-      category = triage.category || category;
-      severity = triage.severity || severity;
+      triage = await triageIssueWithVision(imageUrl, description);
     } catch (e) {
       console.warn('[Groq Triage fallback]:', e.message);
     }
 
-    // Step 3: Save to DB or In-Memory
-    const issueData = {
+    // Step 3: Check for duplicate issues within 200m with same category (unless force submission)
+    const isForced = req.body.force === 'true' || req.body.force === true;
+    if (!isForced) {
+      const duplicates = await Issue.find({
+        location: {
+          $near: {
+            $geometry: { type: 'Point', coordinates: [lng, lat] },
+            $maxDistance: 200, // 200 meters
+          },
+        },
+        category: triage.category,
+        status: { $ne: 'Resolved' },
+      }).limit(3);
+
+      if (duplicates.length > 0) {
+        return res.status(200).json({
+          success: true,
+          isDuplicate: true,
+          message: 'Similar issues found nearby. Consider upvoting existing reports instead.',
+          existingIssues: duplicates.map((d) => ({
+            _id: d._id,
+            trackingId: d.trackingId,
+            description: d.description,
+            upvotes: d.upvotes,
+            status: d.status,
+            category: d.category,
+            severity: d.severity,
+          })),
+        });
+      }
+    }
+
+    // Step 4: Generate tracking ID and save to database
+    const trackingId = generateTrackingId();
+
+    const newIssue = await Issue.create({
+      trackingId,
       description: description.trim(),
       imageUrl,
       location: {
         type: 'Point',
         coordinates: [lng, lat],
       },
-      category,
-      severity,
+      category: triage.category,
+      severity: triage.severity,
+      aiSummary: triage.summary,
+      department: triage.department,
+      aiConfidence: triage.confidence,
       status: 'Pending',
-      createdAt: new Date().toISOString(),
-    };
+    });
 
-    try {
-      const newIssue = await Issue.create(issueData);
-      return res.status(201).json({
-        success: true,
-        data: newIssue,
-      });
-    } catch (dbErr) {
-      const fallbackIssue = {
-        _id: 'civic-' + Date.now(),
-        ...issueData,
-      };
-      inMemoryIssues.unshift(fallbackIssue);
-      return res.status(201).json({
-        success: true,
-        data: fallbackIssue,
-      });
-    }
+    return res.status(201).json({
+      success: true,
+      data: newIssue,
+    });
   } catch (error) {
     console.error('[Create Issue Error]:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to create and triage issue.',
-      error: error.message,
     });
   }
 };
 
 /**
- * @desc    Get all issues with optional filtering (Admin Dashboard & Map)
- * @route   GET /api/issues
+ * @desc    Get all issues with optional filtering and pagination
+ * @route   GET /api/issues?status=...&category=...&severity=...&page=1&limit=20
  * @access  Public
  */
 export const getIssues = async (req, res) => {
   try {
-    const { status, category, severity, limit = 100 } = req.query;
+    const { status, category, severity } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
 
     const filter = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (severity) filter.severity = severity;
 
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const issues = await Issue.find(filter)
-          .sort({ createdAt: -1 })
-          .limit(parseInt(limit));
+    const total = await Issue.countDocuments(filter);
+    const issues = await Issue.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('assignedTo', 'name email department');
 
-        if (issues && issues.length > 0) {
-          return res.status(200).json({
-            success: true,
-            count: issues.length,
-            data: issues,
-          });
-        }
-      } catch (dbErr) {
-        console.warn('[DB fetch fallback to in-memory]:', dbErr.message);
-      }
-    }
-
-    // Fallback to in-memory issues
-    let filtered = [...inMemoryIssues];
-    if (status) filtered = filtered.filter(i => i.status.toLowerCase() === status.toLowerCase());
-    if (category) filtered = filtered.filter(i => i.category.toLowerCase() === category.toLowerCase());
-    if (severity) filtered = filtered.filter(i => i.severity.toLowerCase() === severity.toLowerCase());
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      count: filtered.length,
-      data: filtered,
+      count: issues.length,
+      data: issues,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error('[Get Issues Error]:', error);
-    res.status(200).json({
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch issues.',
+    });
+  }
+};
+
+/**
+ * @desc    Track complaint by tracking ID
+ * @route   GET /api/issues/track/:trackingId
+ * @access  Public
+ */
+export const trackIssue = async (req, res) => {
+  try {
+    const issue = await Issue.findOne({ trackingId: req.params.trackingId });
+
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Complaint not found. Please verify your tracking ID.',
+      });
+    }
+
+    res.json({
       success: true,
-      count: inMemoryIssues.length,
-      data: inMemoryIssues,
+      data: {
+        trackingId: issue.trackingId,
+        description: issue.description,
+        imageUrl: issue.imageUrl,
+        category: issue.category,
+        severity: issue.severity,
+        status: issue.status,
+        department: issue.department,
+        aiSummary: issue.aiSummary,
+        upvotes: issue.upvotes,
+        createdAt: issue.createdAt,
+        updatedAt: issue.updatedAt,
+        resolvedAt: issue.resolvedAt,
+        resolutionNotes: issue.resolutionNotes,
+        resolutionImageUrl: issue.resolutionImageUrl,
+      },
+    });
+  } catch (error) {
+    console.error('[Track Issue Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to track complaint.',
     });
   }
 };
@@ -219,7 +229,7 @@ export const getIssues = async (req, res) => {
 /**
  * @desc    Update issue resolution status
  * @route   PATCH /api/issues/:id/status
- * @access  Protected (Requires Bearer JWT)
+ * @access  Protected (Requires Bearer JWT — Admin)
  */
 export const updateIssueStatus = async (req, res) => {
   try {
@@ -235,48 +245,30 @@ export const updateIssueStatus = async (req, res) => {
       });
     }
 
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const issue = await Issue.findById(id);
-        if (issue) {
-          issue.status = status;
-          await issue.save();
-          return res.status(200).json({
-            success: true,
-            message: `Issue status updated to ${status}.`,
-            data: issue,
-          });
-        }
-      } catch (dbErr) {
-        console.warn('[DB update fallback]:', dbErr.message);
-      }
-    }
-
-    // In-memory update
-    const memIssue = inMemoryIssues.find(i => String(i._id) === String(id));
-    if (memIssue) {
-      memIssue.status = status;
-      return res.status(200).json({
-        success: true,
-        message: `Issue status updated to ${status}.`,
-        data: memIssue,
+    const issue = await Issue.findById(id);
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found.',
       });
     }
 
-    // If not found, create or update fallback entry
-    const newEntry = { _id: id, status, description: 'Civic Grievance', category: 'General', severity: 'Medium', createdAt: new Date().toISOString() };
-    inMemoryIssues.unshift(newEntry);
-    res.status(200).json({
+    issue.status = status;
+    if (status === 'Resolved') {
+      issue.resolvedAt = new Date();
+    }
+    await issue.save();
+
+    return res.status(200).json({
       success: true,
       message: `Issue status updated to ${status}.`,
-      data: newEntry,
+      data: issue,
     });
   } catch (error) {
     console.error('[Update Issue Status Error]:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to update issue status.',
-      error: error.message,
     });
   }
 };
@@ -289,42 +281,30 @@ export const updateIssueStatus = async (req, res) => {
 export const getIssueById = async (req, res) => {
   try {
     const { id } = req.params;
-    try {
-      const issue = await Issue.findById(id);
-      if (issue) {
-        return res.status(200).json({
-          success: true,
-          data: issue,
-        });
-      }
-    } catch (dbErr) {
-      console.warn('[DB getById fallback]:', dbErr.message);
-    }
+    const issue = await Issue.findById(id).populate('assignedTo', 'name email department');
 
-    const memIssue = inMemoryIssues.find(i => String(i._id) === String(id));
-    if (memIssue) {
-      return res.status(200).json({
-        success: true,
-        data: memIssue,
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found.',
       });
     }
 
-    res.status(404).json({
-      success: false,
-      message: 'Issue not found.',
+    return res.status(200).json({
+      success: true,
+      data: issue,
     });
   } catch (error) {
     console.error('[Get Issue By ID Error]:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch issue details.',
-      error: error.message,
     });
   }
 };
 
 /**
- * @desc    Get nearby issues using MongoDB 2dsphere spatial query (Deduplication / Explorer)
+ * @desc    Get nearby issues using MongoDB 2dsphere spatial query
  * @route   GET /api/issues/nearby?lat=...&lng=...&radius=...&category=...
  * @access  Public
  */
@@ -350,54 +330,35 @@ export const getNearbyIssues = async (req, res) => {
       });
     }
 
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const query = {
-          status: { $ne: 'Resolved' },
-          location: {
-            $near: {
-              $geometry: {
-                type: 'Point',
-                coordinates: [longitude, latitude],
-              },
-              $maxDistance: maxDist,
-            },
+    const query = {
+      status: { $ne: 'Resolved' },
+      location: {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude],
           },
-        };
+          $maxDistance: maxDist,
+        },
+      },
+    };
 
-        if (category && category !== 'All') {
-          query.category = category;
-        }
-
-        const issues = await Issue.find(query).limit(30);
-
-        return res.status(200).json({
-          success: true,
-          count: issues.length,
-          data: issues,
-        });
-      } catch (dbErr) {
-        console.warn('[DB getNearby fallback]:', dbErr.message);
-      }
-    }
-
-    // In-memory fallback
-    let nearby = inMemoryIssues.filter(i => i.status !== 'Resolved');
     if (category && category !== 'All') {
-      nearby = nearby.filter(i => i.category === category);
+      query.category = category;
     }
 
-    res.status(200).json({
+    const issues = await Issue.find(query).limit(30);
+
+    return res.status(200).json({
       success: true,
-      count: nearby.length,
-      data: nearby,
+      count: issues.length,
+      data: issues,
     });
   } catch (error) {
     console.error('[Get Nearby Issues Error]:', error);
-    res.status(200).json({
-      success: true,
-      count: inMemoryIssues.length,
-      data: inMemoryIssues,
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch nearby issues.',
     });
   }
 };
@@ -412,62 +373,271 @@ export const upvoteIssue = async (req, res) => {
     const { id } = req.params;
     const { voterId } = req.body;
 
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const issue = await Issue.findById(id);
-        if (issue) {
-          if (voterId && issue.upvotedBy && issue.upvotedBy.includes(String(voterId))) {
-            return res.status(200).json({
-              success: true,
-              message: 'Issue has already been upvoted by this citizen/device.',
-              data: issue,
-            });
-          }
+    const issue = await Issue.findById(id);
 
-          const updateOps = { $inc: { upvotes: 1 } };
-          if (voterId) {
-            updateOps.$addToSet = { upvotedBy: String(voterId) };
-          }
-
-          const updatedIssue = await Issue.findByIdAndUpdate(id, updateOps, { new: true });
-          return res.status(200).json({
-            success: true,
-            message: 'Issue upvoted successfully.',
-            data: updatedIssue,
-          });
-        }
-      } catch (dbErr) {
-        console.warn('[DB upvote fallback]:', dbErr.message);
-      }
-    }
-
-    // In-memory fallback
-    const memIssue = inMemoryIssues.find(i => String(i._id) === String(id));
-    if (memIssue) {
-      memIssue.upvotes = (memIssue.upvotes || 0) + 1;
-      memIssue.upvotedBy = memIssue.upvotedBy || [];
-      if (voterId && !memIssue.upvotedBy.includes(String(voterId))) {
-        memIssue.upvotedBy.push(String(voterId));
-      }
-      return res.status(200).json({
-        success: true,
-        message: 'Issue upvoted successfully.',
-        data: memIssue,
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found.',
       });
     }
 
-    res.status(200).json({
+    // Check for duplicate vote
+    if (voterId && issue.upvotedBy && issue.upvotedBy.includes(String(voterId))) {
+      return res.status(200).json({
+        success: true,
+        message: 'Issue has already been upvoted by this citizen/device.',
+        data: issue,
+      });
+    }
+
+    const updateOps = { $inc: { upvotes: 1 } };
+    if (voterId) {
+      updateOps.$addToSet = { upvotedBy: String(voterId) };
+    }
+
+    const updatedIssue = await Issue.findByIdAndUpdate(id, updateOps, { new: true });
+
+    return res.status(200).json({
       success: true,
       message: 'Issue upvoted successfully.',
-      data: { _id: id, upvotes: 1 },
+      data: updatedIssue,
     });
   } catch (error) {
     console.error('[Upvote Issue Error]:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to register upvote.',
-      error: error.message,
     });
   }
 };
 
+/**
+ * @desc    Assign issue to a worker (Admin only)
+ * @route   PATCH /api/issues/:id/assign
+ * @access  Protected (Admin)
+ */
+export const assignIssue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { workerId } = req.body;
+
+    if (!workerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Worker ID is required.',
+      });
+    }
+
+    const worker = await User.findById(workerId);
+    if (!worker || worker.role !== 'worker') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid worker ID or user is not a worker.',
+      });
+    }
+
+    const issue = await Issue.findById(id);
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found.',
+      });
+    }
+
+    issue.assignedTo = workerId;
+    issue.assignedAt = new Date();
+    issue.status = 'In Progress';
+    await issue.save();
+
+    const populatedIssue = await Issue.findById(id).populate('assignedTo', 'name email department');
+
+    return res.status(200).json({
+      success: true,
+      message: `Issue assigned to ${worker.name || worker.email}.`,
+      data: populatedIssue,
+    });
+  } catch (error) {
+    console.error('[Assign Issue Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assign issue.',
+    });
+  }
+};
+
+/**
+ * @desc    Get tasks assigned to a worker
+ * @route   GET /api/issues/worker/tasks
+ * @access  Protected (Worker)
+ */
+export const getWorkerTasks = async (req, res) => {
+  try {
+    const workerId = req.user._id;
+    const { status } = req.query;
+
+    const filter = { assignedTo: workerId };
+    if (status) filter.status = status;
+
+    const tasks = await Issue.find(filter).sort({ assignedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: tasks.length,
+      data: tasks,
+    });
+  } catch (error) {
+    console.error('[Get Worker Tasks Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch worker tasks.',
+    });
+  }
+};
+
+/**
+ * @desc    Worker resolves an issue with proof photo
+ * @route   PATCH /api/issues/:id/resolve
+ * @access  Protected (Worker)
+ */
+export const resolveIssue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const file = req.file;
+
+    const issue = await Issue.findById(id);
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found.',
+      });
+    }
+
+    // Verify the worker is assigned to this issue
+    if (String(issue.assignedTo) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not assigned to this issue.',
+      });
+    }
+
+    // Upload resolution proof image if provided
+    if (file) {
+      try {
+        const resolutionImageUrl = await uploadToCloudinary(file.buffer, file.originalname);
+        issue.resolutionImageUrl = resolutionImageUrl;
+      } catch (e) {
+        console.warn('[Resolution image upload error]:', e.message);
+      }
+    }
+
+    issue.status = 'Resolved';
+    issue.resolvedAt = new Date();
+    issue.resolutionNotes = notes || '';
+    await issue.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Issue resolved successfully.',
+      data: issue,
+    });
+  } catch (error) {
+    console.error('[Resolve Issue Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resolve issue.',
+    });
+  }
+};
+
+/**
+ * @desc    Get analytics data for dashboard
+ * @route   GET /api/issues/analytics
+ * @access  Protected (Admin)
+ */
+export const getAnalytics = async (req, res) => {
+  try {
+    const [
+      totalIssues,
+      pendingCount,
+      inProgressCount,
+      resolvedCount,
+      categoryBreakdown,
+      severityBreakdown,
+    ] = await Promise.all([
+      Issue.countDocuments(),
+      Issue.countDocuments({ status: 'Pending' }),
+      Issue.countDocuments({ status: 'In Progress' }),
+      Issue.countDocuments({ status: 'Resolved' }),
+      Issue.aggregate([
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Issue.aggregate([
+        { $group: { _id: '$severity', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+    ]);
+
+    // Calculate average resolution time
+    const resolvedIssues = await Issue.find({
+      status: 'Resolved',
+      resolvedAt: { $exists: true },
+    }).select('createdAt resolvedAt');
+
+    let avgResolutionHours = 0;
+    if (resolvedIssues.length > 0) {
+      const totalHours = resolvedIssues.reduce((sum, issue) => {
+        const diff = (new Date(issue.resolvedAt) - new Date(issue.createdAt)) / (1000 * 60 * 60);
+        return sum + diff;
+      }, 0);
+      avgResolutionHours = Math.round(totalHours / resolvedIssues.length);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalIssues,
+        statusBreakdown: {
+          pending: pendingCount,
+          inProgress: inProgressCount,
+          resolved: resolvedCount,
+        },
+        resolutionRate: totalIssues > 0 ? Math.round((resolvedCount / totalIssues) * 100) : 0,
+        avgResolutionHours,
+        categoryBreakdown: categoryBreakdown.map((c) => ({ category: c._id, count: c.count })),
+        severityBreakdown: severityBreakdown.map((s) => ({ severity: s._id, count: s.count })),
+      },
+    });
+  } catch (error) {
+    console.error('[Analytics Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate analytics.',
+    });
+  }
+};
+
+/**
+ * @desc    Get all workers (for assignment dropdown)
+ * @route   GET /api/users/workers
+ * @access  Protected (Admin)
+ */
+export const getWorkers = async (req, res) => {
+  try {
+    const workers = await User.find({ role: 'worker' }).select('name email department');
+
+    return res.status(200).json({
+      success: true,
+      count: workers.length,
+      data: workers,
+    });
+  } catch (error) {
+    console.error('[Get Workers Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch workers.',
+    });
+  }
+};

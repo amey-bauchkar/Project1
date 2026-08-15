@@ -18,8 +18,17 @@ const UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'citizen'],
+      enum: ['admin', 'citizen', 'worker'],
       default: 'citizen',
+    },
+    department: {
+      type: String,
+      enum: ['Roads & Infrastructure', 'Water Supply', 'Sanitation & Waste', 'Electricity Board', 'General Services'],
+    },
+    name: {
+      type: String,
+      trim: true,
+      default: '',
     },
   },
   {

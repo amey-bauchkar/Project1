@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
-import { RefreshCw, LayoutDashboard, MapPin, Filter, Layers, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { RefreshCw, LayoutDashboard, MapPin, Filter, Layers, Clock, CheckCircle2, AlertCircle, BarChart3, Users } from 'lucide-react';
 import useIssues from '../hooks/useIssues';
 import KanbanBoard from './KanbanBoard';
 import MapView from './MapView';
 import IssueModal from './IssueModal';
+import TrendAnalytics from './TrendAnalytics';
 import { Card, Button, Badge } from '../../src/components/ui';
+import { useLanguage } from '../../tanmay/i18n/LanguageContext';
 
 export const AdminDashboard = () => {
+  const { t } = useLanguage();
   const { issues, loading, error, refetch, updateIssueStatus } = useIssues();
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('kanban'); // 'kanban', 'map', or 'both'
+  const [activeTab, setActiveTab] = useState('kanban'); // 'kanban' | 'map' | 'analytics' | 'both'
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const handleCardClick = (issue) => {
@@ -43,11 +46,11 @@ export const AdminDashboard = () => {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-gov-navy animate-pulse" />
               <h3 className="text-base sm:text-lg font-black text-gov-navy tracking-tight uppercase">
-                Municipal Triage Console
+                {t('admin.dashboard')}
               </h3>
             </div>
             <p className="text-xs text-gov-muted mt-0.5 font-medium">
-              Real-time departmental workflow and geographic distribution
+              {t('admin.subtitle')}
             </p>
           </div>
 
@@ -60,7 +63,7 @@ export const AdminDashboard = () => {
               icon={RefreshCw}
               className="text-xs font-bold"
             >
-              Refresh
+              {t('kanban.refresh')}
             </Button>
           </div>
         </div>
@@ -68,22 +71,22 @@ export const AdminDashboard = () => {
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
           <div className="bg-gov-surface p-3 rounded-lg border border-gov-border">
-            <span className="text-[10px] font-bold text-gov-muted uppercase tracking-wider block">Total Reports</span>
+            <span className="text-[10px] font-bold text-gov-muted uppercase tracking-wider block">{t('admin.totalIssues')}</span>
             <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{issues.length}</div>
           </div>
 
           <div className="bg-gov-surface p-3 rounded-lg border border-gov-border border-l-3 border-l-amber-500">
-            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Pending Triage</span>
+            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">{t('common.pending')}</span>
             <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{pendingCount}</div>
           </div>
 
           <div className="bg-gov-surface p-3 rounded-lg border border-gov-border border-l-3 border-l-blue-500">
-            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">In Progress</span>
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">{t('common.inProgress')}</span>
             <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{inProgressCount}</div>
           </div>
 
           <div className="bg-gov-surface p-3 rounded-lg border border-gov-border border-l-3 border-l-emerald-600">
-            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Resolved</span>
+            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">{t('common.resolved')}</span>
             <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{resolvedCount}</div>
           </div>
         </div>
@@ -91,7 +94,7 @@ export const AdminDashboard = () => {
         {/* View Mode Tabs & Filter Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 bg-gov-surface p-2.5 rounded-lg border border-gov-border">
           {/* Tabs */}
-          <div className="flex items-center bg-white p-1 rounded-md border border-gov-border shadow-soft">
+          <div className="flex items-center bg-white p-1 rounded-md border border-gov-border shadow-soft flex-wrap gap-1">
             <button
               onClick={() => setActiveTab('kanban')}
               className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer ${
@@ -100,7 +103,7 @@ export const AdminDashboard = () => {
                   : 'text-gov-muted hover:text-gov-navy'
               }`}
             >
-              Kanban Board
+              {t('admin.kanban')}
             </button>
             <button
               onClick={() => setActiveTab('map')}
@@ -110,7 +113,17 @@ export const AdminDashboard = () => {
                   : 'text-gov-muted hover:text-gov-navy'
               }`}
             >
-              Live Spatial Map
+              {t('admin.mapView')}
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer ${
+                activeTab === 'analytics'
+                  ? 'bg-gov-navy text-gov-accent shadow-soft'
+                  : 'text-gov-muted hover:text-gov-navy'
+              }`}
+            >
+              {t('admin.analytics')}
             </button>
             <button
               onClick={() => setActiveTab('both')}
@@ -120,27 +133,29 @@ export const AdminDashboard = () => {
                   : 'text-gov-muted hover:text-gov-navy'
               }`}
             >
-              Dual View
+              {t('admin.dualView')}
             </button>
           </div>
 
-          {/* Department Filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-gov-muted" />
-            <label className="text-xs font-bold uppercase tracking-wider text-gov-navy whitespace-nowrap">Filter:</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-white border border-gov-border text-gov-navy text-xs font-bold rounded-md focus:ring-gov-navy focus:border-gov-navy block p-1.5"
-            >
-              <option value="All">All Departments</option>
-              <option value="Roads">Roads & Potholes</option>
-              <option value="Water">Water Supply</option>
-              <option value="Sanitation">Sanitation & Waste</option>
-              <option value="Electricity">Electricity & Lighting</option>
-              <option value="Other">Other Issues</option>
-            </select>
-          </div>
+          {/* Department Filter (Only for Kanban/Map) */}
+          {activeTab !== 'analytics' && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-gov-muted" />
+              <label className="text-xs font-bold uppercase tracking-wider text-gov-navy whitespace-nowrap">{t('kanban.filter')}</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-white border border-gov-border text-gov-navy text-xs font-bold rounded-md focus:ring-gov-navy focus:border-gov-navy block p-1.5"
+              >
+                <option value="All">{t('dept.all')}</option>
+                <option value="Roads">{t('dept.roads')}</option>
+                <option value="Water">{t('dept.water')}</option>
+                <option value="Sanitation">{t('dept.sanitation')}</option>
+                <option value="Electricity">{t('dept.electricity')}</option>
+                <option value="Other">{t('dept.other')}</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -149,7 +164,7 @@ export const AdminDashboard = () => {
         {loading && issues.length === 0 ? (
           <div className="h-72 flex flex-col items-center justify-center text-gov-muted bg-gov-surface rounded-xl border border-gov-border">
             <RefreshCw className="animate-spin h-6 w-6 text-gov-navy mb-2.5" />
-            <p className="text-xs font-bold uppercase tracking-wider text-gov-navy">Connecting to Municipal Database...</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-gov-navy">{t('kanban.connecting')}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -163,14 +178,17 @@ export const AdminDashboard = () => {
               <MapView issues={filteredIssues} onMarkerClick={handleCardClick} />
             )}
 
-            {/* View 3: Dual View (Stacked cleanly) */}
+            {/* View 3: Analytics */}
+            {activeTab === 'analytics' && <TrendAnalytics />}
+
+            {/* View 4: Dual View */}
             {activeTab === 'both' && (
               <div className="space-y-6">
                 <KanbanBoard issues={filteredIssues} onCardClick={handleCardClick} />
                 <div className="pt-2">
                   <div className="flex items-center gap-2 mb-3">
                     <MapPin className="w-4 h-4 text-gov-navy" />
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gov-navy">Geospatial Issue Heatmap</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gov-navy">{t('kanban.heatmap')}</h4>
                   </div>
                   <MapView issues={filteredIssues} onMarkerClick={handleCardClick} />
                 </div>
@@ -180,12 +198,15 @@ export const AdminDashboard = () => {
         )}
       </div>
 
-      {/* Detail & Status Modal */}
+      {/* Detail & Status Modal with Worker Assignment */}
       <IssueModal
         issue={selectedIssue}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onUpdateStatus={updateIssueStatus}
+        onUpdateStatus={async (id, status) => {
+          await updateIssueStatus(id, status);
+          refetch();
+        }}
       />
     </div>
   );
