@@ -1,9 +1,11 @@
 import React, { useState } from "react";
+import { MapPin, Crosshair, RefreshCw, AlertTriangle, CheckCircle2, Navigation } from "lucide-react";
 import { getCurrentCoordinates, formatCoordinates, reverseGeocode } from "../utils/geoHelper";
+import Button from "../../src/components/ui/Button";
 
 /**
  * LocationPicker Component
- * Handles GPS fetching, accuracy indicator, and display for civic reports.
+ * Handles GPS fetching, accuracy indicator, and coordinates display for civic reports.
  */
 export default function LocationPicker({
   latitude,
@@ -42,12 +44,14 @@ export default function LocationPicker({
   return (
     <div className="w-full mb-5">
       <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-          <span className="text-emerald-600">📍</span> Incident Location <span className="text-rose-500">*</span>
+        <label className="text-xs font-bold uppercase tracking-wider text-gov-navy flex items-center gap-1.5">
+          <MapPin className="w-3.5 h-3.5 text-gov-navy" />
+          <span>Incident Location</span>
+          <span className="text-rose-600">*</span>
         </label>
         {hasLocation && (
-          <span className="text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[11px] font-bold text-gov-navy bg-gov-accent/20 px-2 py-0.5 rounded border border-gov-accent-dark/30 flex items-center gap-1 uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-gov-navy" />
             GPS Locked
           </span>
         )}
@@ -60,64 +64,42 @@ export default function LocationPicker({
             type="button"
             onClick={handleGetLocation}
             disabled={disabled || isFetching}
-            className={`w-full p-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-3 transition-all duration-200 ${
+            className={`w-full p-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-3 transition-all duration-150 ${
               isFetching
-                ? "bg-emerald-50 border-emerald-400 text-emerald-800 cursor-wait"
-                : "bg-white border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/50 text-slate-700 shadow-sm active:scale-[0.99]"
+                ? "bg-gov-surface border-gov-navy text-gov-navy cursor-wait"
+                : "bg-gov-surface/50 border-gov-border hover:border-gov-navy hover:bg-gov-surface text-gov-navy active:scale-[0.99]"
             } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
           >
             {isFetching ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-5 w-5 text-emerald-600"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                <span className="font-semibold text-emerald-700">Acquiring Precise GPS...</span>
-              </>
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gov-navy">
+                <RefreshCw className="w-4 h-4 animate-spin text-gov-navy" />
+                <span>Acquiring Precise Geolocation...</span>
+              </div>
             ) : (
               <>
-                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                <div className="w-10 h-10 rounded-lg bg-gov-navy text-gov-accent flex items-center justify-center flex-shrink-0 shadow-soft">
+                  <Navigation className="w-5 h-5" />
                 </div>
-                <div className="text-left">
-                  <p className="font-semibold text-slate-800 text-sm">Get My Live Location</p>
-                  <p className="text-xs text-slate-500">Auto-tags precise coordinates for field workers</p>
+                <div className="text-left flex-1">
+                  <p className="font-bold text-gov-navy text-sm">Tag Current GPS Location</p>
+                  <p className="text-xs text-gov-muted font-medium">Auto-tags precise coordinates for field workers</p>
                 </div>
               </>
             )}
           </button>
 
           {errorMsg && (
-            <div className="mt-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2 animate-fadeIn">
-              <span className="text-base leading-none">⚠️</span>
+            <div className="mt-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-600 mt-0.5" />
               <div className="flex-1">
-                <p className="font-semibold">GPS Acquisition Failed</p>
+                <p className="font-bold">GPS Acquisition Error</p>
                 <p className="mt-0.5">{errorMsg}</p>
                 <button
                   type="button"
                   onClick={handleGetLocation}
-                  className="mt-1.5 text-xs font-bold text-rose-800 underline hover:text-rose-900"
+                  className="mt-1 text-xs font-bold text-rose-900 underline hover:text-rose-950"
                 >
-                  Retry with High Accuracy
+                  Retry Acquisition
                 </button>
               </div>
             </div>
@@ -125,46 +107,48 @@ export default function LocationPicker({
         </div>
       ) : (
         /* Location Acquired Info Box */
-        <div className="p-4 rounded-xl bg-emerald-50/90 border border-emerald-200 text-slate-800 shadow-sm transition-all animate-fadeIn">
+        <div className="p-4 rounded-xl bg-white border border-gov-border text-gov-text-main shadow-card">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow">
-                ✓
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-gov-navy text-gov-accent flex items-center justify-center font-bold text-sm shadow-soft flex-shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
-                  Location Acquired
+                <p className="text-[10px] font-bold text-gov-muted uppercase tracking-widest">
+                  Location Verified
                 </p>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-sm font-bold text-gov-navy font-mono">
                   {formatCoordinates(latitude, longitude)}
                 </p>
               </div>
             </div>
 
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={handleGetLocation}
               disabled={disabled || isFetching}
-              className="text-xs font-medium text-emerald-700 hover:text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-200 shadow-sm transition active:scale-95 flex items-center gap-1"
+              icon={RefreshCw}
+              className="text-xs"
             >
-              <svg className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
               Refresh
-            </button>
+            </Button>
           </div>
 
           {address && (
-            <p className="mt-2 text-xs text-slate-600 bg-white/70 p-2 rounded-lg border border-emerald-100/60 line-clamp-2">
-              📍 <span className="font-medium">{address}</span>
+            <p className="mt-2.5 text-xs text-gov-text-body bg-gov-surface p-2.5 rounded-lg border border-gov-border font-medium flex items-start gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-gov-muted flex-shrink-0 mt-0.5" />
+              <span className="line-clamp-2">{address}</span>
             </p>
           )}
 
           {accuracy && (
-            <div className="mt-2 flex items-center gap-2 text-[11px] text-emerald-700/90 font-medium">
-              <span>🎯 Accuracy: ±{accuracy} meters</span>
+            <div className="mt-2.5 flex items-center gap-2 text-[11px] text-gov-muted font-bold uppercase tracking-wider">
+              <Crosshair className="w-3 h-3 text-gov-navy" />
+              <span>Accuracy: ±{accuracy} meters</span>
               <span>•</span>
-              <span>Ready for GeoJSON indexing</span>
+              <span>GeoJSON Indexed</span>
             </div>
           )}
         </div>

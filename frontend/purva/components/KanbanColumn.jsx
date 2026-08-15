@@ -1,41 +1,52 @@
 import React from 'react';
+import { Clock, RefreshCw, CheckCircle2 } from 'lucide-react';
 import IssueCard from './IssueCard';
 
-const STATUS_ICONS = {
-  Pending: (
-    <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  ),
-  'In Progress': (
-    <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-    </svg>
-  ),
-  Resolved: (
-    <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  )
+const STATUS_CONFIG = {
+  Pending: {
+    icon: Clock,
+    iconColor: 'text-amber-600',
+    headerBorder: 'border-t-2 border-t-amber-500',
+    countBg: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  'In Progress': {
+    icon: RefreshCw,
+    iconColor: 'text-blue-600',
+    headerBorder: 'border-t-2 border-t-blue-500',
+    countBg: 'bg-blue-50 text-blue-800 border-blue-200',
+  },
+  Resolved: {
+    icon: CheckCircle2,
+    iconColor: 'text-emerald-600',
+    headerBorder: 'border-t-2 border-t-emerald-500',
+    countBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  },
 };
 
 export const KanbanColumn = ({ status, issues = [], onCardClick }) => {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.Pending;
+  const Icon = config.icon;
+
   return (
-    <div className="bg-gray-100 p-4 rounded-xl flex flex-col min-h-[500px] border border-gray-200/70">
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
+    <div className={`bg-gov-surface p-3.5 rounded-xl flex flex-col min-h-[460px] border border-gov-border ${config.headerBorder}`}>
+      {/* Column Header */}
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-gov-border">
         <div className="flex items-center gap-2">
-          {STATUS_ICONS[status]}
-          <h3 className="font-semibold text-sm text-gray-800 tracking-wide">{status}</h3>
+          <Icon className={`w-4 h-4 ${config.iconColor} flex-shrink-0`} />
+          <h3 className="font-bold text-xs uppercase tracking-wider text-gov-navy whitespace-nowrap">
+            {status}
+          </h3>
         </div>
-        <span className="bg-white text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full border border-gray-200 shadow-2xs">
+        <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded border shadow-soft ${config.countBg}`}>
           {issues.length}
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+      {/* Column Cards Container */}
+      <div className="flex-1 overflow-y-auto space-y-2 pr-0.5 max-h-[600px]">
         {issues.length === 0 ? (
-          <div className="h-40 flex flex-col items-center justify-center text-gray-400 text-xs border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
-            <span>No issues {status.toLowerCase()}</span>
+          <div className="h-32 flex flex-col items-center justify-center text-gov-muted text-xs border border-dashed border-gov-border rounded-lg p-3 text-center bg-white/50">
+            <span className="font-medium text-slate-400">No {status.toLowerCase()} reports</span>
           </div>
         ) : (
           issues.map((issue) => (

@@ -1,140 +1,108 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../tanmay/context/AuthContext';
-import CitizenPortal from '../janhavi/components/CitizenPortal';
 import AdminDashboard from '../purva/components/AdminDashboard';
-import AdminLogin from '../tanmay/components/AdminLogin';
-import { FilePlus, LayoutDashboard, Sparkles, Shield, MapPin, CheckCircle, Smartphone, Monitor } from 'lucide-react';
+import useIssues from '../purva/hooks/useIssues';
+import { Hero, FeatureStrip, Card, Badge, Button, CategoryAnalyticsCard } from './components/ui';
+import { BarChart3, Monitor, Shield, Sparkles, Building2, MapPin, CheckCircle2, LayoutDashboard, PlusCircle } from 'lucide-react';
 
 export const UnifiedPortal = () => {
-  const { isAuthenticated, user } = useAuth();
-  const [activeTab, setActiveTab] = useState('both'); // 'citizen', 'admin', or 'both'
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { issues } = useIssues();
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'admin'
+
+  const handleHeroAction = () => {
+    navigate('/report');
+  };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 pb-12">
-      {/* Top Banner with Quick Switcher */}
-      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white border-b border-emerald-900 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-300" /> SIH25031 Practice System
-                </span>
-                <span className="text-xs text-emerald-200">Live AI-Triage & Realtime MERN Platform</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight mt-1">
-                Jharkhand Crowdsourced Civic Command Center
-              </h1>
-              <p className="text-xs sm:text-sm text-emerald-100/80 mt-0.5">
-                Complete unified system combining Citizen Mobile Photo/GPS Reporting & Municipal Operations Kanban/Map.
-              </p>
-            </div>
+    <div className="min-h-screen bg-gov-surface text-gov-text-body font-sans pb-20">
+      
+      {/* 1. Full-Width Corporate Hero Banner */}
+      <Hero
+        tag="GOVERNMENT OF JHARKHAND • OFFICIAL CIVIC PORTAL"
+        title="Jharkhand Civic Issue Reporting & Resolution System"
+        subtitle="Empowering citizens with direct, transparent reporting of civic infrastructure issues. Automated AI-triage routes real-time GPS reports directly to municipal departments for fast on-ground resolution."
+        onPrimaryClick={handleHeroAction}
+        primaryButtonText="Submit Grievance Report"
+        onSecondaryClick={() => {
+          const el = document.getElementById('portal-content-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }}
+        secondaryButtonText="Municipal Operations"
+      />
 
-            {/* View Toggle Tabs */}
-            <div className="flex items-center bg-emerald-950/50 p-1.5 rounded-xl border border-emerald-600/40 backdrop-blur-sm self-start md:self-auto">
-              <button
-                onClick={() => setActiveTab('both')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === 'both'
-                    ? 'bg-white text-emerald-900 shadow-sm'
-                    : 'text-emerald-100 hover:text-white hover:bg-emerald-800/50'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Split View</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('citizen')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === 'citizen'
-                    ? 'bg-white text-emerald-900 shadow-sm'
-                    : 'text-emerald-100 hover:text-white hover:bg-emerald-800/50'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Citizen Mobile View</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === 'admin'
-                    ? 'bg-white text-emerald-900 shadow-sm'
-                    : 'text-emerald-100 hover:text-white hover:bg-emerald-800/50'
-                }`}
-              >
-                <Monitor className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Admin Operations</span>
-              </button>
-            </div>
+      {/* 2. 4-Card Feature Strip */}
+      <FeatureStrip
+        onCardAction={(key) => {
+          if (key === 'photo' || key === 'triage') navigate('/report');
+          else {
+            const el = document.getElementById('portal-content-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }
+        }}
+      />
+
+      {/* 3. Main Interactive Command Console */}
+      <section id="portal-content-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+        
+        {/* Section Header & View Mode Switcher */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-5 mb-8 border-b border-gov-border">
+          <div>
+            <span className="text-[11px] font-bold text-gov-navy uppercase tracking-widest bg-gov-accent/20 px-2.5 py-1 rounded border border-gov-accent-dark/30">
+              Interactive Command Console
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-gov-navy tracking-tight mt-2 uppercase">
+              Civic Operations & Analytics
+            </h2>
+            <p className="text-xs sm:text-sm text-gov-muted mt-1 font-medium">
+              Real-time departmental grievance distribution, geospatial monitoring, and resolution Kanban triage.
+            </p>
+          </div>
+
+          {/* Action Row */}
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <Button
+              variant="accent"
+              size="sm"
+              onClick={() => navigate('/report')}
+              icon={PlusCircle}
+              className="font-extrabold uppercase tracking-wider text-xs shadow-soft"
+            >
+              Report New Issue
+            </Button>
           </div>
         </div>
-      </div>
 
-      {/* Main Unified Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        {/* Case 1: Split View (Both Citizen Mobile + Admin Dashboard Side-by-Side) */}
-        {activeTab === 'both' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column: Citizen Mobile Experience */}
-            <div className="lg:col-span-4 bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200 sticky top-20">
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                    📱
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900 leading-none">Citizen Reporting</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Mobile-optimized interface</p>
-                  </div>
-                </div>
-                <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                  Janhavi's Module
-                </span>
-              </div>
-
-              {/* Citizen Reporting Component */}
-              <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
-                <CitizenPortal apiBaseUrl="http://localhost:5000" />
-              </div>
+        {/* Content Layouts: Left Category Pie Chart Analytics, Right Municipal Triage Dashboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column: Category Breakdown Pie Chart & Analytics (4.5 cols) */}
+          <div className="lg:col-span-5 xl:col-span-4 sticky top-24">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-widest text-gov-navy flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-gov-navy" />
+                <span>Departmental Distribution</span>
+              </span>
+              <Badge variant="surface" size="xs">
+                Live Data
+              </Badge>
             </div>
 
-            {/* Right Column: Municipal Operations Dashboard */}
-            <div className="lg:col-span-8 bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200">
-              <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
-                    🏛️
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-slate-900 leading-none">Municipal Command & Map</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Live triage Kanban & Leaflet spatial clustering</p>
-                  </div>
-                </div>
-                <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-2 py-0.5 rounded-full border border-blue-200">
-                  Purva's Module
-                </span>
-              </div>
-
-              {/* Municipal Admin Dashboard Component */}
-              <AdminDashboard />
-            </div>
+            {/* Reusable Donut Pie Chart Component */}
+            <CategoryAnalyticsCard issues={issues} />
           </div>
-        )}
 
-        {/* Case 2: Citizen Mobile View Only */}
-        {activeTab === 'citizen' && (
-          <div className="max-w-lg mx-auto bg-white rounded-3xl p-6 shadow-md border border-slate-200">
-            <CitizenPortal apiBaseUrl="http://localhost:5000" />
-          </div>
-        )}
-
-        {/* Case 3: Admin Operations Only */}
-        {activeTab === 'admin' && (
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+          {/* Right Column: Municipal Operations Dashboard (7.5 cols) */}
+          <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl p-5 sm:p-7 shadow-card border border-gov-border">
             <AdminDashboard />
           </div>
-        )}
-      </div>
+
+        </div>
+
+      </section>
+
     </div>
   );
 };

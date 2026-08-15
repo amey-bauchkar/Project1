@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { RefreshCw, LayoutDashboard, MapPin, Filter, Layers, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import useIssues from '../hooks/useIssues';
 import KanbanBoard from './KanbanBoard';
 import MapView from './MapView';
 import IssueModal from './IssueModal';
+import { Card, Button, Badge } from '../../src/components/ui';
 
 export const AdminDashboard = () => {
   const { issues, loading, error, refetch, updateIssueStatus } = useIssues();
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('both'); // 'kanban', 'map', or 'both'
+  const [activeTab, setActiveTab] = useState('kanban'); // 'kanban', 'map', or 'both'
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   const handleCardClick = (issue) => {
@@ -33,147 +35,146 @@ export const AdminDashboard = () => {
   const resolvedCount = issues.filter((i) => i.status === 'Resolved').length;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 p-6 md:p-8">
-      {/* Top Header */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="w-full text-gov-text-body font-sans">
+      {/* Top Controls Header */}
+      <div className="mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-gov-border">
           <div>
             <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></span>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Jharkhand Civic Admin Dashboard
-              </h1>
+              <span className="w-2.5 h-2.5 rounded-full bg-gov-navy animate-pulse" />
+              <h3 className="text-base sm:text-lg font-black text-gov-navy tracking-tight uppercase">
+                Municipal Triage Console
+              </h3>
             </div>
-            <p className="text-sm text-slate-500 mt-1">
-              Municipal Issue Triage, Geographic Monitoring & Resolution Workflow
+            <p className="text-xs text-gov-muted mt-0.5 font-medium">
+              Real-time departmental workflow and geographic distribution
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => refetch()}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-all"
+              loading={loading}
+              icon={RefreshCw}
+              className="text-xs font-bold"
             >
-              <svg
-                className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
               Refresh
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-          <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Reports</span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">{issues.length}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
+          <div className="bg-gov-surface p-3 rounded-lg border border-gov-border">
+            <span className="text-[10px] font-bold text-gov-muted uppercase tracking-wider block">Total Reports</span>
+            <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{issues.length}</div>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 border-l-4 border-l-amber-500">
-            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Pending</span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">{pendingCount}</div>
+
+          <div className="bg-gov-surface p-3 rounded-lg border border-gov-border border-l-3 border-l-amber-500">
+            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Pending Triage</span>
+            <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{pendingCount}</div>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 border-l-4 border-l-blue-500">
-            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">In Progress</span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">{inProgressCount}</div>
+
+          <div className="bg-gov-surface p-3 rounded-lg border border-gov-border border-l-3 border-l-blue-500">
+            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">In Progress</span>
+            <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{inProgressCount}</div>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 border-l-4 border-l-emerald-500">
-            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Resolved</span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">{resolvedCount}</div>
+
+          <div className="bg-gov-surface p-3 rounded-lg border border-gov-border border-l-3 border-l-emerald-600">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Resolved</span>
+            <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{resolvedCount}</div>
           </div>
         </div>
 
-        {/* View Controls & Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-          {/* View Mode Tabs */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab('both')}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'both'
-                  ? 'bg-white text-emerald-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Split View
-            </button>
+        {/* View Mode Tabs & Filter Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 bg-gov-surface p-2.5 rounded-lg border border-gov-border">
+          {/* Tabs */}
+          <div className="flex items-center bg-white p-1 rounded-md border border-gov-border shadow-soft">
             <button
               onClick={() => setActiveTab('kanban')}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer ${
                 activeTab === 'kanban'
-                  ? 'bg-white text-emerald-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-gov-navy text-gov-accent shadow-soft'
+                  : 'text-gov-muted hover:text-gov-navy'
               }`}
             >
               Kanban Board
             </button>
             <button
               onClick={() => setActiveTab('map')}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer ${
                 activeTab === 'map'
-                  ? 'bg-white text-emerald-700 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-gov-navy text-gov-accent shadow-soft'
+                  : 'text-gov-muted hover:text-gov-navy'
               }`}
             >
-              Live Map
+              Live Spatial Map
+            </button>
+            <button
+              onClick={() => setActiveTab('both')}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer ${
+                activeTab === 'both'
+                  ? 'bg-gov-navy text-gov-accent shadow-soft'
+                  : 'text-gov-muted hover:text-gov-navy'
+              }`}
+            >
+              Dual View
             </button>
           </div>
 
-          {/* Category Filter */}
+          {/* Department Filter */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-slate-500">Category:</label>
+            <Filter className="w-3.5 h-3.5 text-gov-muted" />
+            <label className="text-xs font-bold uppercase tracking-wider text-gov-navy whitespace-nowrap">Filter:</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-slate-50 border border-slate-300 text-slate-800 text-xs rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2 font-medium"
+              className="bg-white border border-gov-border text-gov-navy text-xs font-bold rounded-md focus:ring-gov-navy focus:border-gov-navy block p-1.5"
             >
-              <option value="All">All Categories</option>
-              <option value="Roads">Roads</option>
-              <option value="Water">Water</option>
-              <option value="Sanitation">Sanitation</option>
-              <option value="Electricity">Electricity</option>
-              <option value="Other">Other</option>
+              <option value="All">All Departments</option>
+              <option value="Roads">Roads & Potholes</option>
+              <option value="Water">Water Supply</option>
+              <option value="Sanitation">Sanitation & Waste</option>
+              <option value="Electricity">Electricity & Lighting</option>
+              <option value="Other">Other Issues</option>
             </select>
           </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto">
+      <div>
         {loading && issues.length === 0 ? (
-          <div className="h-96 flex flex-col items-center justify-center text-slate-400">
-            <svg className="animate-spin h-8 w-8 text-emerald-500 mb-3" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-            </svg>
-            <p className="text-sm font-medium">Loading civic issues...</p>
+          <div className="h-72 flex flex-col items-center justify-center text-gov-muted bg-gov-surface rounded-xl border border-gov-border">
+            <RefreshCw className="animate-spin h-6 w-6 text-gov-navy mb-2.5" />
+            <p className="text-xs font-bold uppercase tracking-wider text-gov-navy">Connecting to Municipal Database...</p>
           </div>
         ) : (
-          <div className="space-y-8">
-            {/* Split View */}
-            {activeTab === 'both' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <div className="lg:col-span-7">
-                  <KanbanBoard issues={filteredIssues} onCardClick={handleCardClick} />
-                </div>
-                <div className="lg:col-span-5 sticky top-6">
-                  <MapView issues={filteredIssues} onMarkerClick={handleCardClick} />
-                </div>
-              </div>
-            )}
-
-            {/* Kanban Only */}
+          <div className="space-y-6">
+            {/* View 1: Kanban Board */}
             {activeTab === 'kanban' && (
               <KanbanBoard issues={filteredIssues} onCardClick={handleCardClick} />
             )}
 
-            {/* Map Only */}
+            {/* View 2: Map Only */}
             {activeTab === 'map' && (
               <MapView issues={filteredIssues} onMarkerClick={handleCardClick} />
+            )}
+
+            {/* View 3: Dual View (Stacked cleanly) */}
+            {activeTab === 'both' && (
+              <div className="space-y-6">
+                <KanbanBoard issues={filteredIssues} onCardClick={handleCardClick} />
+                <div className="pt-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MapPin className="w-4 h-4 text-gov-navy" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-gov-navy">Geospatial Issue Heatmap</h4>
+                  </div>
+                  <MapView issues={filteredIssues} onMarkerClick={handleCardClick} />
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -191,4 +192,3 @@ export const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
