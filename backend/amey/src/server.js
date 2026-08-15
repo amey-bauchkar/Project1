@@ -9,15 +9,12 @@ import { notFoundHandler, errorHandler } from './middleware/errorMiddleware.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
-
 const app = express();
 
 // Standard Middlewares
 app.use(
   cors({
-    origin: '*', // Allow all frontends (Purva, Janhavi, Tanmay) during development
+    origin: '*', // Allow all frontends during development
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
@@ -45,13 +42,19 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`  Jharkhand Civic Backend Service running on port ${PORT}`);
-  console.log(`  Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`  Issue Routes: http://localhost:${PORT}/api/issues`);
-  console.log(`  Auth Routes:  http://localhost:${PORT}/api/auth`);
-  console.log(`====================================================`);
-});
+const startServer = async () => {
+  await connectDB();
+
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`  Jharkhand Civic Backend Service running on port ${PORT}`);
+    console.log(`  Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`  Issue Routes: http://localhost:${PORT}/api/issues`);
+    console.log(`  Auth Routes:  http://localhost:${PORT}/api/auth`);
+    console.log(`====================================================`);
+  });
+};
+
+startServer();
 
 export default app;

@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import dns from 'dns';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Ensure public DNS resolution on Windows networks for MongoDB Atlas SRV records
 try {
@@ -13,11 +16,13 @@ try {
  */
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/jharkhand_civic');
+    const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/jharkhand_civic';
+    const conn = await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+    });
     console.log(`[MongoDB] Database Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`[MongoDB Connection Error]: ${error.message}`);
-    process.exit(1);
+    console.warn(`[MongoDB Warning]: Could not connect to Atlas (${error.message}). Please ensure your IP address is whitelisted in MongoDB Atlas (Network Access -> Allow from anywhere 0.0.0.0/0).`);
   }
 };
 

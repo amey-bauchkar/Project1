@@ -9,7 +9,8 @@ import {
   ShieldCheck, 
   FilePlus, 
   LayoutDashboard,
-  Check
+  Check,
+  MapPin
 } from 'lucide-react';
 import Button from '../../src/components/ui/Button';
 
@@ -27,6 +28,7 @@ export const Navbar = () => {
   };
 
   const isCitizenView = location.pathname === '/' || location.pathname === '/report';
+  const isNearbyView = location.pathname === '/nearby';
   const isAdminView = location.pathname.startsWith('/admin');
   const isLoginView = location.pathname === '/login';
 
@@ -82,6 +84,18 @@ export const Navbar = () => {
             >
               <FilePlus className="w-4 h-4" />
               <span>Citizen Report</span>
+            </Link>
+
+            <Link
+              to="/nearby"
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
+                isNearbyView 
+                  ? 'text-gov-navy bg-gov-surface font-extrabold border border-gov-border' 
+                  : 'text-gov-muted hover:text-gov-navy hover:bg-gov-surface'
+              }`}
+            >
+              <MapPin className="w-4 h-4 text-gov-accent-dark" />
+              <span>Nearby Issues</span>
             </Link>
 
             {isAuthenticated && (

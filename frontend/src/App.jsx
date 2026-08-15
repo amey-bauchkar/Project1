@@ -4,6 +4,7 @@ import { AuthProvider } from '../tanmay/context/AuthContext';
 import AppShell from '../tanmay/components/AppShell';
 import ProtectedRoute from '../tanmay/components/ProtectedRoute';
 import AdminLogin from '../tanmay/components/AdminLogin';
+import NearbyIssuesView from '../tanmay/components/nearby/NearbyIssuesView';
 import CitizenPortal from '../janhavi/components/CitizenPortal';
 import AdminDashboard from '../purva/components/AdminDashboard';
 import UnifiedPortal from './UnifiedPortal';
@@ -75,6 +76,7 @@ export const App = () => {
 
             {/* Dedicated Standalone Sub-Routes */}
             <Route path="report" element={<StandaloneCitizenPage />} />
+            <Route path="nearby" element={<NearbyIssuesView />} />
             <Route path="login" element={<AdminLogin />} />
             <Route
               path="admin"

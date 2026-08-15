@@ -195,3 +195,117 @@ export const getIssueById = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc    Get nearby issues using MongoDB 2dsphere spatial query (Deduplication / Explorer)
+ * @route   GET /api/issues/nearby?lat=...&lng=...&radius=...&category=...
+ * @access  Public
+ */
+export const getNearbyIssues = async (req, res) => {
+  try {
+    const { lat, lng, radius = 2000, category } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude (lat) and Longitude (lng) query parameters are required.',
+      });
+    }
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    const maxDist = parseInt(radius, 10) || 2000;
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid coordinate format.',
+      });
+    }
+
+    const query = {
+      status: { $ne: 'Resolved' },
+      location: {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude], // GeoJSON expects [lng, lat]
+          },
+          $maxDistance: maxDist,
+        },
+      },
+    };
+
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+
+    const issues = await Issue.find(query).limit(30);
+
+    res.status(200).json({
+      success: true,
+      count: issues.length,
+      data: issues,
+    });
+  } catch (error) {
+    console.error('[Get Nearby Issues Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch nearby issues.',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Upvote a civic issue to escalate priority
+ * @route   PATCH /api/issues/:id/upvote
+ * @access  Public
+ */
+export const upvoteIssue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { voterId } = req.body;
+
+    const issue = await Issue.findById(id);
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found.',
+      });
+    }
+
+    // Check if voter already upvoted
+    if (voterId && issue.upvotedBy && issue.upvotedBy.includes(String(voterId))) {
+      return res.status(200).json({
+        success: true,
+        message: 'Issue has already been upvoted by this citizen/device.',
+        data: issue,
+      });
+    }
+
+    const updateOps = {
+      $inc: { upvotes: 1 },
+    };
+
+    if (voterId) {
+      updateOps.$addToSet = { upvotedBy: String(voterId) };
+    }
+
+    const updatedIssue = await Issue.findByIdAndUpdate(id, updateOps, { new: true });
+
+    res.status(200).json({
+      success: true,
+      message: 'Issue upvoted successfully.',
+      data: updatedIssue,
+    });
+  } catch (error) {
+    console.error('[Upvote Issue Error]:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to register upvote.',
+      error: error.message,
+    });
+  }
+};
+
