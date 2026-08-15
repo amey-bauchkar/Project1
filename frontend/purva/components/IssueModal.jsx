@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Tag, Clock, MapPin, CheckCircle2, UserCheck, Building2, Brain, ThumbsUp, FileText, Image as ImageIcon } from 'lucide-react';
-import { Button, Badge } from '../../src/components/ui';
+import { Button, Badge, BeforeAfterSlider } from '../../src/components/ui';
 import { getAuthHeaders, getToken } from '../../tanmay/utils/auth';
+
 import { useLanguage } from '../../tanmay/i18n/LanguageContext';
 
 const STATUS_OPTIONS = ['Pending', 'In Progress', 'Resolved'];
@@ -136,13 +137,15 @@ export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus, onAssignWor
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5">
-          {/* Image */}
+          {/* Image & Before/After Proof */}
           {issue.imageUrl && (
-            <div className="w-full h-64 rounded-lg overflow-hidden bg-gov-navy flex items-center justify-center border border-gov-border">
-              <img
-                src={issue.imageUrl}
-                alt={issue.category}
-                className="w-full h-full object-contain"
+            <div>
+              <BeforeAfterSlider
+                beforeImage={issue.imageUrl}
+                afterImage={issue.resolutionImageUrl}
+                beforeLabel="Reported Evidence"
+                afterLabel="Worker Resolution"
+                verifiedDistance={issue.resolutionDistanceMeters != null ? issue.resolutionDistanceMeters : null}
               />
             </div>
           )}
@@ -156,6 +159,7 @@ export const IssueModal = ({ issue, isOpen, onClose, onUpdateStatus, onAssignWor
               {issue.description}
             </p>
           </div>
+
 
           {/* AI Triage & Department */}
           {(issue.aiSummary || issue.department) && (

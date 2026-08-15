@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Building2, Send, AlertCircle, Loader2, CheckCircle2, Shield, ThumbsUp, ArrowRight, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Building2, Send, AlertCircle, Loader2, CheckCircle2, Shield, ThumbsUp, ArrowRight, X, WifiOff, RefreshCw } from "lucide-react";
 import CameraCapture from "./CameraCapture";
 import LocationPicker from "./LocationPicker";
 import SubmissionForm from "./SubmissionForm";
@@ -7,11 +7,12 @@ import SuccessScreen from "./SuccessScreen";
 import Button from "../../src/components/ui/Button";
 import { useLanguage } from "../../tanmay/i18n/LanguageContext";
 import { upvoteIssue } from "../../tanmay/services/nearbyService";
+import { queueOfflineReport, getQueuedReports, syncQueuedReports, registerAutoSync } from "../../tanmay/utils/offlineQueue";
 
 /**
  * CitizenPortal Component
  * Mobile-first civic issue reporting container with camera capture, GPS acquisition,
- * duplicate detection, Groq Vision AI analysis, honeypot spam protection, and multilingual i18n.
+ * duplicate detection, Groq Vision AI analysis, honeypot spam protection, IndexedDB offline sync, and multilingual i18n.
  */
 export default function CitizenPortal({ apiBaseUrl = "" }) {
   const { t } = useLanguage();
@@ -23,10 +24,53 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [submittedData, setSubmittedData] = useState(null);
+  const [formTimestamp] = useState(() => Date.now()); // Anti-spam velocity token
+
+  // Offline PWA Queue state
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [queuedCount, setQueuedCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [offlineSaved, setOfflineSaved] = useState(false);
 
   // Duplicate detection state
   const [duplicateData, setDuplicateData] = useState(null);
   const [upvotedDuplicateIds, setUpvotedDuplicateIds] = useState([]);
+
+  useEffect(() => {
+    // Check initial queued reports
+    getQueuedReports().then((items) => setQueuedCount(items.length));
+
+    // Register network online/offline listeners
+    const handleStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleStatus);
+    window.addEventListener('offline', handleStatus);
+
+    // Register auto sync when network restores
+    const unregister = registerAutoSync((syncRes) => {
+      if (syncRes.synced > 0) {
+        getQueuedReports().then((items) => setQueuedCount(items.length));
+      }
+    });
+
+    return () => {
+      window.removeEventListener('online', handleStatus);
+      window.removeEventListener('offline', handleStatus);
+      if (unregister) unregister();
+    };
+  }, []);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await syncQueuedReports();
+      const remaining = await getQueuedReports();
+      setQueuedCount(remaining.length);
+    } catch (err) {
+      console.warn('Sync failed:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleImageSelected = (file) => {
     setImageFile(file);
@@ -52,6 +96,7 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
     setErrorMessage(null);
     setSubmittedData(null);
     setDuplicateData(null);
+    setOfflineSaved(false);
     setUpvotedDuplicateIds([]);
   };
 
@@ -77,12 +122,35 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
 
     setIsSubmitting(true);
 
+    // If device is offline, store directly in IndexedDB queue
+    if (!navigator.onLine) {
+      try {
+        await queueOfflineReport({
+          description: description.trim(),
+          latitude,
+          longitude,
+          imageBlob: imageFile,
+          imageFileName: imageFile.name,
+        });
+        const items = await getQueuedReports();
+        setQueuedCount(items.length);
+        setOfflineSaved(true);
+        setIsSubmitting(false);
+        return;
+      } catch (queueErr) {
+        setErrorMessage("Failed to save report offline. Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const formData = new FormData();
       formData.append("image", imageFile);
       formData.append("description", description.trim());
       formData.append("latitude", latitude);
       formData.append("longitude", longitude);
+      formData.append("formTimestamp", formTimestamp);
       if (honeypot) formData.append("website", honeypot);
       if (force) formData.append("force", "true");
 
@@ -108,8 +176,22 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
       setSubmittedData(result);
       setDuplicateData(null);
     } catch (err) {
-      console.error("Submission Error:", err);
-      setErrorMessage(err.message || "An unexpected error occurred during submission.");
+      console.warn("Network submission failed, falling back to offline IndexedDB storage:", err);
+      // Seamless offline fallback on network drops
+      try {
+        await queueOfflineReport({
+          description: description.trim(),
+          latitude,
+          longitude,
+          imageBlob: imageFile,
+          imageFileName: imageFile.name,
+        });
+        const items = await getQueuedReports();
+        setQueuedCount(items.length);
+        setOfflineSaved(true);
+      } catch (fallbackErr) {
+        setErrorMessage(err.message || "An unexpected error occurred during submission.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -124,6 +206,30 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
     }
   };
 
+
+  // If saved offline to IndexedDB
+  if (offlineSaved) {
+    return (
+      <div className="w-full max-w-xl mx-auto bg-white rounded-xl shadow-card border border-gov-border p-6 text-center animate-fadeIn font-sans">
+        <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-3">
+          <WifiOff className="w-6 h-6" />
+        </div>
+        <h2 className="text-lg font-black text-gov-navy mb-1">Grievance Saved Locally in Offline Queue</h2>
+        <p className="text-xs text-gov-muted font-medium mb-4 leading-relaxed">
+          Your complaint, GPS location, and photo evidence have been safely stored in your device storage.
+          The system will automatically synchronize and submit it to the Municipal Database as soon as an internet connection is detected.
+        </p>
+        <div className="p-3 bg-gov-surface border border-gov-border rounded-lg text-xs font-mono text-gov-navy mb-5 flex items-center justify-between">
+          <span>Pending Offline Reports:</span>
+          <span className="font-bold text-amber-700">{queuedCount} In Queue</span>
+        </div>
+        <Button variant="primary" fullWidth onClick={handleResetForm}>
+          Submit Another Grievance
+        </Button>
+      </div>
+    );
+  }
+
   // If successfully submitted, show SuccessScreen
   if (submittedData) {
     return (
@@ -135,8 +241,29 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
 
   return (
     <div className="w-full max-w-xl mx-auto bg-white rounded-xl shadow-card border border-gov-border flex flex-col font-sans relative pb-6 antialiased">
+      {/* Offline Alert Banner */}
+      {(!isOnline || queuedCount > 0) && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-xs font-bold flex items-center justify-between rounded-t-xl">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4" />
+            <span>{!isOnline ? 'Offline Mode Active (Zero Data Loss)' : `${queuedCount} report(s) pending sync`}</span>
+          </div>
+          {isOnline && queuedCount > 0 && (
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className="bg-white text-amber-900 text-[10px] font-black px-2.5 py-1 rounded flex items-center gap-1 hover:bg-amber-50 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing...' : 'Sync Now'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header Banner */}
-      <header className="bg-gov-surface border-b border-gov-border px-5 py-4 rounded-t-xl">
+      <header className={`bg-gov-surface border-b border-gov-border px-5 py-4 ${(!isOnline || queuedCount > 0) ? '' : 'rounded-t-xl'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gov-navy text-gov-accent flex items-center justify-center shadow-soft font-bold text-sm flex-shrink-0">
@@ -155,6 +282,7 @@ export default function CitizenPortal({ apiBaseUrl = "" }) {
             {t('report.publicForm')}
           </span>
         </div>
+
 
         {/* Step Indicators */}
         <div className="mt-3.5 grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold uppercase tracking-wider">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCw, LayoutDashboard, MapPin, Filter, Layers, Clock, CheckCircle2, AlertCircle, BarChart3, Users } from 'lucide-react';
+import { RefreshCw, LayoutDashboard, MapPin, Filter, Layers, Clock, CheckCircle2, AlertCircle, BarChart3, Users, Download, ShieldAlert } from 'lucide-react';
 import useIssues from '../hooks/useIssues';
 import KanbanBoard from './KanbanBoard';
 import MapView from './MapView';
@@ -26,6 +26,59 @@ export const AdminDashboard = () => {
     setIsModalOpen(false);
   };
 
+  // Export filtered issues to CSV
+  const handleExportCSV = () => {
+    if (!filteredIssues || filteredIssues.length === 0) return;
+
+    const headers = [
+      'Tracking ID',
+      'Category',
+      'Severity',
+      'Department',
+      'Status',
+      'Description',
+      'Upvotes',
+      'Latitude',
+      'Longitude',
+      'Reported Date',
+      'Resolved Date',
+      'SLA Status',
+    ];
+
+    const rows = filteredIssues.map((issue) => {
+      const lat = issue.location?.coordinates?.[1] || '';
+      const lng = issue.location?.coordinates?.[0] || '';
+      const reported = issue.createdAt ? new Date(issue.createdAt).toISOString() : '';
+      const resolved = issue.resolvedAt ? new Date(issue.resolvedAt).toISOString() : '';
+      const isBreached = issue.slaBreached || (issue.status !== 'Resolved' && issue.slaDeadline && new Date() > new Date(issue.slaDeadline));
+      const slaStatus = issue.status === 'Resolved' ? 'Completed' : isBreached ? 'Breached' : 'Within SLA';
+
+      return [
+        `"${issue.trackingId || issue._id}"`,
+        `"${issue.category || ''}"`,
+        `"${issue.severity || 'Medium'}"`,
+        `"${issue.department || ''}"`,
+        `"${issue.status || 'Pending'}"`,
+        `"${(issue.description || '').replace(/"/g, '""')}"`,
+        issue.upvotes || 1,
+        lat,
+        lng,
+        `"${reported}"`,
+        `"${resolved}"`,
+        `"${slaStatus}"`,
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Jharkhand_Municipal_Grievances_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Filter issues by category
   const filteredIssues = issues.filter((issue) => {
     if (selectedCategory === 'All') return true;
@@ -36,6 +89,9 @@ export const AdminDashboard = () => {
   const pendingCount = issues.filter((i) => (i.status || 'Pending') === 'Pending').length;
   const inProgressCount = issues.filter((i) => i.status === 'In Progress').length;
   const resolvedCount = issues.filter((i) => i.status === 'Resolved').length;
+  const slaBreachedCount = issues.filter((i) => {
+    return i.slaBreached || (i.status !== 'Resolved' && i.slaDeadline && new Date() > new Date(i.slaDeadline));
+  }).length;
 
   return (
     <div className="w-full text-gov-text-body font-sans">
@@ -55,6 +111,15 @@ export const AdminDashboard = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={filteredIssues.length === 0}
+              className="px-3 py-2 text-xs font-bold bg-white text-gov-navy border border-gov-border hover:bg-gov-surface rounded-md flex items-center gap-1.5 shadow-soft transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
             <Button
               variant="outline"
               size="sm"
@@ -69,7 +134,7 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-4">
           <div className="bg-gov-surface p-3 rounded-lg border border-gov-border">
             <span className="text-[10px] font-bold text-gov-muted uppercase tracking-wider block">{t('admin.totalIssues')}</span>
             <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{issues.length}</div>
@@ -89,7 +154,20 @@ export const AdminDashboard = () => {
             <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">{t('common.resolved')}</span>
             <div className="text-xl font-black text-gov-navy mt-0.5 font-mono">{resolvedCount}</div>
           </div>
+
+          <div className="bg-gov-surface p-3 rounded-lg border border-gov-border border-l-3 border-l-red-600 col-span-2 sm:col-span-1">
+            <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider block">SLA Breaches</span>
+            <div className="text-xl font-black text-red-700 mt-0.5 font-mono flex items-center gap-1.5">
+              <span>{slaBreachedCount}</span>
+              {slaBreachedCount === 0 && (
+                <span className="text-[10px] text-emerald-700 bg-emerald-100 font-sans font-bold px-1.5 py-0.5 rounded">
+                  100% OK
+                </span>
+              )}
+            </div>
+          </div>
         </div>
+
 
         {/* View Mode Tabs & Filter Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 bg-gov-surface p-2.5 rounded-lg border border-gov-border">

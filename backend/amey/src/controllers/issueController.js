@@ -5,6 +5,25 @@ import { uploadToCloudinary } from '../config/cloudinary.js';
 import { triageIssueWithVision } from '../services/groqService.js';
 
 /**
+ * Calculate distance in meters between two coordinates (lat/lng)
+ */
+const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const R = 6371e3; // Earth's radius in meters
+  const rad = Math.PI / 180;
+  const phi1 = lat1 * rad;
+  const phi2 = lat2 * rad;
+  const deltaPhi = (lat2 - lat1) * rad;
+  const deltaLambda = (lon2 - lon1) * rad;
+
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+};
+
+/**
  * Generate a human-readable tracking ID: JH-YYYYMMDD-XXXXX
  */
 const generateTrackingId = () => {
@@ -12,6 +31,7 @@ const generateTrackingId = () => {
   const random = String(Date.now()).slice(-5);
   return `JH-${date}-${random}`;
 };
+
 
 /**
  * @desc    Submit a new civic issue (Citizen)
@@ -189,7 +209,10 @@ export const getIssues = async (req, res) => {
  */
 export const trackIssue = async (req, res) => {
   try {
-    const issue = await Issue.findOne({ trackingId: req.params.trackingId });
+    const issue = await Issue.findOne({ trackingId: req.params.trackingId }).populate(
+      'assignedTo',
+      'name email department'
+    );
 
     if (!issue) {
       return res.status(404).json({
@@ -201,20 +224,29 @@ export const trackIssue = async (req, res) => {
     res.json({
       success: true,
       data: {
+        _id: issue._id,
         trackingId: issue.trackingId,
         description: issue.description,
         imageUrl: issue.imageUrl,
+        location: issue.location,
         category: issue.category,
         severity: issue.severity,
         status: issue.status,
         department: issue.department,
         aiSummary: issue.aiSummary,
+        aiConfidence: issue.aiConfidence,
         upvotes: issue.upvotes,
         createdAt: issue.createdAt,
         updatedAt: issue.updatedAt,
+        assignedTo: issue.assignedTo,
+        assignedAt: issue.assignedAt,
         resolvedAt: issue.resolvedAt,
         resolutionNotes: issue.resolutionNotes,
         resolutionImageUrl: issue.resolutionImageUrl,
+        resolutionLocation: issue.resolutionLocation,
+        resolutionDistanceMeters: issue.resolutionDistanceMeters,
+        slaDeadline: issue.slaDeadline,
+        slaBreached: issue.slaBreached || (issue.status !== 'Resolved' && new Date() > new Date(issue.slaDeadline)),
       },
     });
   } catch (error) {
@@ -225,6 +257,7 @@ export const trackIssue = async (req, res) => {
     });
   }
 };
+
 
 /**
  * @desc    Update issue resolution status
@@ -503,7 +536,7 @@ export const getWorkerTasks = async (req, res) => {
 export const resolveIssue = async (req, res) => {
   try {
     const { id } = req.params;
-    const { notes } = req.body;
+    const { notes, latitude, longitude } = req.body;
     const file = req.file;
 
     const issue = await Issue.findById(id);
@@ -532,6 +565,26 @@ export const resolveIssue = async (req, res) => {
       }
     }
 
+    // Geofencing verification: Worker's GPS vs Grievance GPS
+    let distanceMeters = null;
+    const workerLat = parseFloat(latitude);
+    const workerLng = parseFloat(longitude);
+
+    if (!isNaN(workerLat) && !isNaN(workerLng)) {
+      issue.resolutionLocation = {
+        type: 'Point',
+        coordinates: [workerLng, workerLat],
+      };
+
+      if (issue.location && Array.isArray(issue.location.coordinates) && issue.location.coordinates.length >= 2) {
+        const [origLng, origLat] = issue.location.coordinates;
+        distanceMeters = calculateHaversineDistance(origLat, origLng, workerLat, workerLng);
+        issue.resolutionDistanceMeters = distanceMeters;
+      }
+    }
+
+    const isSlaBreached = issue.slaDeadline ? new Date() > new Date(issue.slaDeadline) : false;
+    issue.slaBreached = isSlaBreached;
     issue.status = 'Resolved';
     issue.resolvedAt = new Date();
     issue.resolutionNotes = notes || '';
@@ -539,7 +592,9 @@ export const resolveIssue = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Issue resolved successfully.',
+      message: distanceMeters !== null
+        ? `Issue resolved successfully. Verified on-site (${distanceMeters}m from grievance location).`
+        : 'Issue resolved successfully.',
       data: issue,
     });
   } catch (error) {
@@ -550,6 +605,7 @@ export const resolveIssue = async (req, res) => {
     });
   }
 };
+
 
 /**
  * @desc    Get analytics data for dashboard
@@ -563,6 +619,7 @@ export const getAnalytics = async (req, res) => {
       pendingCount,
       inProgressCount,
       resolvedCount,
+      slaBreachedCount,
       categoryBreakdown,
       severityBreakdown,
     ] = await Promise.all([
@@ -570,6 +627,12 @@ export const getAnalytics = async (req, res) => {
       Issue.countDocuments({ status: 'Pending' }),
       Issue.countDocuments({ status: 'In Progress' }),
       Issue.countDocuments({ status: 'Resolved' }),
+      Issue.countDocuments({
+        $or: [
+          { slaBreached: true },
+          { status: { $ne: 'Resolved' }, slaDeadline: { $lt: new Date() } },
+        ],
+      }),
       Issue.aggregate([
         { $group: { _id: '$category', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
@@ -595,6 +658,10 @@ export const getAnalytics = async (req, res) => {
       avgResolutionHours = Math.round(totalHours / resolvedIssues.length);
     }
 
+    const slaComplianceRate = totalIssues > 0
+      ? Math.max(0, Math.round(((totalIssues - slaBreachedCount) / totalIssues) * 100))
+      : 100;
+
     return res.status(200).json({
       success: true,
       data: {
@@ -606,10 +673,13 @@ export const getAnalytics = async (req, res) => {
         },
         resolutionRate: totalIssues > 0 ? Math.round((resolvedCount / totalIssues) * 100) : 0,
         avgResolutionHours,
+        slaBreachedCount,
+        slaComplianceRate,
         categoryBreakdown: categoryBreakdown.map((c) => ({ category: c._id, count: c.count })),
         severityBreakdown: severityBreakdown.map((s) => ({ severity: s._id, count: s.count })),
       },
     });
+
   } catch (error) {
     console.error('[Analytics Error]:', error);
     res.status(500).json({

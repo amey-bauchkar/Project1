@@ -4,17 +4,41 @@ import L from 'leaflet';
 import '../styles/map.css';
 
 // Fix standard Leaflet default icon issues in bundlers
-const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const createCustomMarker = (status, severity, category) => {
+  let color = '#d97706'; // amber for Pending
+  if (status === 'Resolved') color = '#059669'; // emerald
+  else if (status === 'In Progress') color = '#2563eb'; // blue
+  else if (severity === 'High') color = '#dc2626'; // red
 
-L.Marker.prototype.options.icon = DefaultIcon;
+  return L.divIcon({
+    className: 'custom-div-icon',
+    html: `
+      <div style="
+        background-color: ${color};
+        width: 24px;
+        height: 24px;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        border: 2px solid #ffffff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <div style="
+          width: 8px;
+          height: 8px;
+          background: white;
+          border-radius: 50%;
+          transform: rotate(45deg);
+        "></div>
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -24],
+  });
+};
 
 const DEFAULT_CENTER = [23.3441, 85.3096]; // Ranchi, Jharkhand default coordinates
 
@@ -46,8 +70,10 @@ export const MapView = ({ issues = [], onMarkerClick }) => {
             return null;
           }
 
+          const customIcon = createCustomMarker(issue.status, issue.severity, issue.category);
+
           return (
-            <Marker key={issue._id || issue.id} position={[lat, lng]}>
+            <Marker key={issue._id || issue.id} position={[lat, lng]} icon={customIcon}>
               <Popup className="custom-map-popup">
                 <div className="p-3 max-w-[220px] font-sans">
                   {issue.imageUrl && (
@@ -59,7 +85,11 @@ export const MapView = ({ issues = [], onMarkerClick }) => {
                   )}
                   <div className="flex items-center justify-between gap-1 mb-1.5">
                     <span className="font-bold text-xs text-gov-navy uppercase tracking-wider">{issue.category}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gov-navy text-gov-accent">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      issue.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' :
+                      issue.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                      'bg-amber-100 text-amber-800'
+                    }`}>
                       {issue.status}
                     </span>
                   </div>
@@ -68,7 +98,7 @@ export const MapView = ({ issues = [], onMarkerClick }) => {
                   </p>
                   <button
                     onClick={() => onMarkerClick && onMarkerClick(issue)}
-                    className="w-full text-center text-xs bg-gov-navy hover:bg-gov-navy-light text-white font-bold py-1.5 px-2 rounded transition-colors cursor-pointer"
+                    className="w-full text-center text-xs bg-gov-navy hover:bg-gov-navy/90 text-white font-bold py-1.5 px-2 rounded transition-colors cursor-pointer"
                   >
                     View Details & Update
                   </button>
@@ -83,3 +113,4 @@ export const MapView = ({ issues = [], onMarkerClick }) => {
 };
 
 export default MapView;
+

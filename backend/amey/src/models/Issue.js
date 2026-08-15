@@ -59,7 +59,7 @@ const IssueSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // ─── Worker Assignment Fields ──────────────────────────────────
+    // ─── Worker Assignment & Resolution Fields ────────────────────
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -80,6 +80,29 @@ const IssueSchema = new mongoose.Schema(
     resolutionNotes: {
       type: String,
       default: '',
+    },
+    resolutionLocation: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude] of worker at time of resolution
+        default: undefined,
+      },
+    },
+    resolutionDistanceMeters: {
+      type: Number,
+      default: 0,
+    },
+    slaDeadline: {
+      type: Date,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // Default 24-hour SLA
+    },
+    slaBreached: {
+      type: Boolean,
+      default: false,
     },
 
     // ─── Community Engagement ──────────────────────────────────────

@@ -110,9 +110,14 @@ const seedDemo = async () => {
         aiConfidence: 0.85,
         upvotes: 8,
         assignedTo: worker1._id,
-        assignedAt: new Date(Date.now() - 604800000),
-        resolvedAt: new Date(Date.now() - 259200000),
-        resolutionNotes: 'Replaced 4 faulty sodium vapor lamps and repaired wiring connection. All lights operational.',
+        assignedAt: new Date(Date.now() - 86400000),
+        resolvedAt: new Date(Date.now() - 28800000),
+        resolutionNotes: 'Replaced 4 faulty sodium vapor lamps with energy-efficient LED luminaires and repaired wiring connection. All lights operational.',
+        resolutionImageUrl: 'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?w=600&auto=format&fit=crop&q=60',
+        resolutionLocation: { type: 'Point', coordinates: [85.3189, 23.4125] },
+        resolutionDistanceMeters: 14,
+        slaDeadline: new Date(Date.now() + 86400000),
+        slaBreached: false,
       },
       {
         trackingId: 'JH-20260815-00005',
@@ -126,6 +131,8 @@ const seedDemo = async () => {
         aiSummary: 'Uncovered sewer drain near school zone posing child safety hazard.',
         aiConfidence: 0.91,
         upvotes: 42,
+        slaDeadline: new Date(Date.now() + 43200000),
+        slaBreached: false,
       },
       {
         trackingId: 'JH-20260815-00006',
@@ -141,6 +148,8 @@ const seedDemo = async () => {
         upvotes: 56,
         assignedTo: worker1._id,
         assignedAt: new Date(Date.now() - 43200000),
+        slaDeadline: new Date(Date.now() + 21600000),
+        slaBreached: false,
       },
       {
         trackingId: 'JH-20260815-00007',
@@ -154,6 +163,8 @@ const seedDemo = async () => {
         aiSummary: 'Chronic water logging due to blocked storm drains affecting major road.',
         aiConfidence: 0.82,
         upvotes: 19,
+        slaDeadline: new Date(Date.now() + 64800000),
+        slaBreached: false,
       },
       {
         trackingId: 'JH-20260815-00008',
@@ -168,14 +179,20 @@ const seedDemo = async () => {
         aiConfidence: 0.79,
         upvotes: 7,
         assignedTo: worker1._id,
-        assignedAt: new Date(Date.now() - 1209600000),
-        resolvedAt: new Date(Date.now() - 604800000),
-        resolutionNotes: 'Replaced broken tiles on 150m stretch. Added tactile paving for visually impaired.',
+        assignedAt: new Date(Date.now() - 172800000),
+        resolvedAt: new Date(Date.now() - 86400000),
+        resolutionNotes: 'Replaced broken tiles on 150m stretch. Added tactile paving for visually impaired pedestrians.',
+        resolutionImageUrl: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&auto=format&fit=crop&q=60',
+        resolutionLocation: { type: 'Point', coordinates: [85.3351, 23.3601] },
+        resolutionDistanceMeters: 18,
+        slaDeadline: new Date(Date.now() + 86400000),
+        slaBreached: false,
       },
     ];
 
     const createdIssues = await Issue.insertMany(issues);
     console.log(`Created ${createdIssues.length} demo issues.`);
+
 
     console.log('\n====================================================');
     console.log('  Demo Data Seeded Successfully!');

@@ -1,7 +1,23 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, ArrowLeft, CheckCircle2, Clock, AlertTriangle, MapPin, Building2, Brain, Calendar, FileText } from 'lucide-react';
+import {
+  Search,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  MapPin,
+  Building2,
+  Brain,
+  Calendar,
+  FileText,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+} from 'lucide-react';
+
 import { useLanguage } from '../../tanmay/i18n/LanguageContext';
+import { BeforeAfterSlider } from '../../src/components/ui/BeforeAfterSlider';
 
 export default function TrackComplaint() {
   const { t } = useLanguage();
@@ -121,7 +137,20 @@ export default function TrackComplaint() {
             </div>
 
             {/* Details Grid */}
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-5">
+              {/* Interactive Before & After Visual Proof */}
+              {result.imageUrl && (
+                <div>
+                  <BeforeAfterSlider
+                    beforeImage={result.imageUrl}
+                    afterImage={result.resolutionImageUrl}
+                    beforeLabel="Citizen Evidence (Before)"
+                    afterLabel="Field Repair Proof (After)"
+                    verifiedDistance={result.resolutionDistanceMeters != null ? result.resolutionDistanceMeters : null}
+                  />
+                </div>
+              )}
+
               {/* Category + Severity */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -158,6 +187,11 @@ export default function TrackComplaint() {
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-gov-muted">{t('track.aiAnalysis')}</p>
                     <p className="text-sm text-gov-text font-medium">{result.aiSummary}</p>
+                    {result.aiConfidence > 0 && (
+                      <span className="text-[10px] text-gov-muted mt-1 inline-block">
+                        Statistical Confidence: {Math.round(result.aiConfidence * 100)}%
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -171,38 +205,6 @@ export default function TrackComplaint() {
                 </div>
               </div>
 
-              {/* Timeline */}
-              <div className="border-t border-gov-border pt-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gov-muted mb-3">{t('track.timeline')}</p>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs">
-                    <Calendar className="w-3.5 h-3.5 text-gov-muted" />
-                    <span className="text-gov-muted font-medium">{t('track.reported')}</span>
-                    <span className="font-bold text-gov-navy">
-                      {new Date(result.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  {result.updatedAt && result.updatedAt !== result.createdAt && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Clock className="w-3.5 h-3.5 text-gov-muted" />
-                      <span className="text-gov-muted font-medium">{t('track.lastUpdated')}</span>
-                      <span className="font-bold text-gov-navy">
-                        {new Date(result.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  )}
-                  {result.resolvedAt && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="text-gov-muted font-medium">{t('track.resolved')}</span>
-                      <span className="font-bold text-emerald-700">
-                        {new Date(result.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Resolution Notes */}
               {result.resolutionNotes && (
                 <div className="border-t border-gov-border pt-4">
@@ -212,6 +214,56 @@ export default function TrackComplaint() {
                   </div>
                 </div>
               )}
+
+              {/* Governance & Notification Milestones Timeline */}
+              <div className="border-t border-gov-border pt-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gov-navy mb-3 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-gov-navy" />
+                  <span>Citizen Notification & Governance Timeline</span>
+                </p>
+                <div className="space-y-3 relative pl-4 border-l-2 border-gov-border ml-1">
+                  {/* Step 1: Registered */}
+                  <div className="relative">
+                    <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-gov-navy" />
+                    <div className="text-xs">
+                      <p className="font-bold text-gov-navy">Report Registered in Jharkhand Municipal Database</p>
+                      <p className="text-[11px] text-gov-muted mt-0.5">
+                        {new Date(result.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 2: Assigned */}
+                  {result.assignedAt && (
+                    <div className="relative">
+                      <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-600" />
+                      <div className="text-xs">
+                        <p className="font-bold text-blue-900">
+                          Dispatched to {result.assignedTo?.name || 'Field Officer'} ({result.department || 'Operations'})
+                        </p>
+                        <p className="text-[11px] text-gov-muted mt-0.5">
+                          {new Date(result.assignedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 3: Resolved */}
+                  {result.resolvedAt && (
+                    <div className="relative">
+                      <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                      <div className="text-xs">
+                        <p className="font-bold text-emerald-800">
+                          Physical Resolution Completed & Verified On-Site
+                        </p>
+                        <p className="text-[11px] text-gov-muted mt-0.5">
+                          {new Date(result.resolvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Community Stats */}
               <div className="border-t border-gov-border pt-4 flex items-center justify-between text-xs">
@@ -227,3 +279,4 @@ export default function TrackComplaint() {
     </div>
   );
 }
+
